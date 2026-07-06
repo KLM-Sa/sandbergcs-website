@@ -8,12 +8,17 @@
   var body = document.body;
 
   /* ---------- Hero Reveal (beim Laden) ---------- */
-  /* gilt für den Start-Hero UND den Projektseiten-Header (gleiche Eingangs-Geste) */
+  /* gilt für den Start-Hero UND den Projektseiten-Header (gleiche Eingangs-Geste).
+     Doppel-rAF: Startzustand wird sicher gemalt, bevor die Transition triggert.
+     setTimeout-Fallback: rAF ist in Hintergrund-Tabs/Sparmodus pausiert — ohne
+     Fallback bliebe die Seite dort dauerhaft im versteckten Startzustand. */
   var hero = document.querySelector(".hero, .case__hero");
   if (hero) {
+    var heroIn = function () { hero.classList.add("is-in"); };
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { hero.classList.add("is-in"); });
+      requestAnimationFrame(heroIn);
     });
+    setTimeout(heroIn, 600);
   }
 
   /* ---------- Footer: Copyright-Jahr automatisch aktuell ---------- */
