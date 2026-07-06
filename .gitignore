@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Interne Arbeitsdateien — nicht Teil der öffentlichen Website
+# (GitHub Pages Free = öffentliches Repo, daher strikt trennen)
+/.claude/
+/CLAUDE.md
+/Entwürfe CI/
+/Fonts/
+/font-test.html
