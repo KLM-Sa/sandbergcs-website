@@ -110,10 +110,46 @@
   try { saved = localStorage.getItem(STORE_KEY) || "de"; } catch (e) {}
   applyLang(saved);
 
+  /* ---------- Sektions-Vermessung (geteilt: Berg + Punkt-Raster) ---------- */
+  /* Oberkante + Helligkeit (Hintergrund-Luminanz) aller Vollbreiten-Sektionen.
+     Berg und Punkt-Raster leiten daraus ab, ob sie hell oder dunkel zeichnen. */
+  var pageSections = [];
+  var sectionConsumers = [];   // Module, die nach jeder Neuvermessung nachziehen
+
+  function collectPageSections() {
+    pageSections = [];
+    document.querySelectorAll("main > section, footer").forEach(function (s) {
+      var m = getComputedStyle(s).backgroundColor.match(/\d+(\.\d+)?/g);
+      var lum = m ? (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255 : 1;
+      pageSections.push({
+        top: s.getBoundingClientRect().top + window.pageYOffset,
+        dark: lum < 0.5
+      });
+    });
+    pageSections.sort(function (a, b) { return a.top - b.top; });
+  }
+  function refreshSections() {
+    collectPageSections();
+    sectionConsumers.forEach(function (f) { f(); });
+  }
+  /* Ist die Sektion an einer Dokument-Y-Position dunkel? */
+  function darkAtDocY(docY) {
+    var dark = pageSections.length ? pageSections[0].dark : true;
+    for (var i = 0; i < pageSections.length; i++) {
+      if (pageSections[i].top <= docY) { dark = pageSections[i].dark; } else { break; }
+    }
+    return dark;
+  }
+  collectPageSections();
+  window.addEventListener("load", refreshSections);
+  window.addEventListener("resize", refreshSections);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(refreshSections);
+  }
+
   /* ---------- Globales Berg-Leitmotiv ---------- */
   /* Ein Berg, zwei Farbschichten: weiß auf dunklen Sektionen, schwarz auf Sand.
-     Die Sektions-Hintergründe werden einmal vermessen (Luminanz); beim Scrollen
-     crossfaden nur noch zwei Opacity-Werte an den Sektionsgrenzen.
+     Beim Scrollen crossfaden nur zwei Opacity-Werte an den Sektionsgrenzen.
      Ersetzt mix-blend-mode: difference — der Blend-Layer zwang den Browser,
      die Headlines beim Scrollen permanent mitzukompositieren (Glyphen-Flackern). */
   var berg = document.querySelector(".berg");
@@ -129,23 +165,8 @@
   if (berg) {
     var bergLight = berg.querySelector(".berg__svg--light");
     var bergDark = berg.querySelector(".berg__svg--dark");
-    var bergSections = [];
     var bergLast = { s: "", l: "", d: "" };
     var bergTicking = false;
-
-    /* Sektions-Oberkanten + Helligkeit (Luminanz des Hintergrunds) einsammeln */
-    function collectBergSections() {
-      bergSections = [];
-      document.querySelectorAll("main > section, footer").forEach(function (s) {
-        var m = getComputedStyle(s).backgroundColor.match(/\d+(\.\d+)?/g);
-        var lum = m ? (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255 : 1;
-        bergSections.push({
-          top: s.getBoundingClientRect().top + window.pageYOffset,
-          dark: lum < 0.5
-        });
-      });
-      bergSections.sort(function (a, b) { return a.top - b.top; });
-    }
 
     function updateBerg() {
       var vh = window.innerHeight;
@@ -158,12 +179,12 @@
       }
 
       /* 2) Farbschicht passend zur Sektion in der Berg-Zone (unteres Viewport) */
-      if (bergLight && bergDark && bergSections.length) {
+      if (bergLight && bergDark && pageSections.length) {
         var sample = window.pageYOffset + vh * 0.85;
-        var cur = bergSections[0], next = null;
-        for (var i = 0; i < bergSections.length; i++) {
-          if (bergSections[i].top <= sample) { cur = bergSections[i]; }
-          else { next = bergSections[i]; break; }
+        var cur = pageSections[0], next = null;
+        for (var i = 0; i < pageSections.length; i++) {
+          if (pageSections[i].top <= sample) { cur = pageSections[i]; }
+          else { next = pageSections[i]; break; }
         }
         var lightAmt = cur.dark ? 1 : 0;
         if (next && next.dark !== cur.dark) {
@@ -189,15 +210,119 @@
       berg.style.setProperty("--berg-scale", String(BERG_PARKED));
     }
 
-    collectBergSections();
     updateBerg();
     window.addEventListener("scroll", onBergScroll, { passive: true });
-    window.addEventListener("resize", function () { collectBergSections(); updateBerg(); });
-    window.addEventListener("load", function () { collectBergSections(); updateBerg(); });
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { collectBergSections(); updateBerg(); });
-    }
+    sectionConsumers.push(updateBerg);
   }
+
+  /* ---------- Punkt-Raster mit Cursor-Gravitation ---------- */
+  /* Feines Punktraster hinter allen Inhalten (z 39: über den Sektionsflächen,
+     unter Berg und Content). Die Punkte werden vom Cursor minimal angezogen —
+     weicher Falloff, geeaster Nachlauf — und nehmen die Farbe der jeweiligen
+     Sektion an (hell auf dunkel, dunkel auf Sand). Das Canvas wird per JS
+     erzeugt, es braucht kein Markup. Die rAF-Schleife läuft nur, solange sich
+     tatsächlich etwas bewegt; bei reduced-motion bleibt das Raster statisch. */
+  (function () {
+    var SPACING = 32;        // Rasterweite (px)
+    var DOT_R = 1;           // Punktradius (px)
+    var PULL_RADIUS = 260;   // Wirkradius des Cursors (px)
+    var PULL_MAX = 9;        // maximale Verschiebung zum Cursor (px)
+    var EASE = 0.14;         // Nachlauf der Punkte (0..1)
+    var A_LIGHT = 0.16;      // Alpha: helle Punkte auf dunklen Sektionen
+    var A_DARK = 0.12;       // Alpha: dunkle Punkte auf Sand
+    var A_BOOST = 0.10;      // leichte Betonung im Cursor-Umfeld
+
+    var canvas = document.createElement("canvas");
+    canvas.className = "dotgrid";
+    canvas.setAttribute("aria-hidden", "true");
+    document.body.appendChild(canvas);
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    var cols = 0, rows = 0, offX = 0, offY = 0, dpr = 1;
+    var disp = null;                 // [dx, dy] je Punkt (aktuelle Verschiebung)
+    var mx = -1e4, my = -1e4;        // Cursor; weit weg = keine Wirkung
+    var raf = null;
+
+    function sizeGrid() {
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(window.innerWidth * dpr);
+      canvas.height = Math.round(window.innerHeight * dpr);
+      cols = Math.ceil(window.innerWidth / SPACING) + 1;
+      rows = Math.ceil(window.innerHeight / SPACING) + 1;
+      offX = (window.innerWidth - (cols - 1) * SPACING) / 2;
+      offY = (window.innerHeight - (rows - 1) * SPACING) / 2;
+      disp = new Float32Array(cols * rows * 2);
+      draw();
+    }
+
+    /* Zeichnet einen Frame; liefert true, solange Punkte noch unterwegs sind */
+    function draw() {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      var scrollY = window.pageYOffset;
+      var moving = false;
+      var TAU = Math.PI * 2;
+
+      for (var r = 0; r < rows; r++) {
+        var by = offY + r * SPACING;
+        var rowDark = darkAtDocY(by + scrollY);
+        var col = rowDark ? "255,231,182" : "10,10,10";
+        var baseA = rowDark ? A_LIGHT : A_DARK;
+
+        for (var c = 0; c < cols; c++) {
+          var i = (r * cols + c) * 2;
+          var bx = offX + c * SPACING;
+
+          /* Ziel-Verschiebung Richtung Cursor (weicher, quadratischer Falloff) */
+          var ddx = mx - bx, ddy = my - by;
+          var dist = Math.sqrt(ddx * ddx + ddy * ddy);
+          var tx = 0, ty = 0, inf = 0;
+          if (dist < PULL_RADIUS && dist > 0.001) {
+            inf = 1 - dist / PULL_RADIUS;
+            inf *= inf;
+            var pull = PULL_MAX * inf;
+            tx = ddx / dist * pull;
+            ty = ddy / dist * pull;
+          }
+
+          var dx = disp[i] += (tx - disp[i]) * EASE;
+          var dy = disp[i + 1] += (ty - disp[i + 1]) * EASE;
+          if (!moving && (Math.abs(tx - dx) > 0.05 || Math.abs(ty - dy) > 0.05)) moving = true;
+
+          ctx.fillStyle = "rgba(" + col + "," + (baseA + A_BOOST * inf).toFixed(3) + ")";
+          ctx.beginPath();
+          ctx.arc(bx + dx, by + dy, DOT_R, 0, TAU);
+          ctx.fill();
+        }
+      }
+      return moving;
+    }
+
+    function tick() {
+      raf = draw() ? window.requestAnimationFrame(tick) : null;
+    }
+    function wake() {
+      if (raf === null) raf = window.requestAnimationFrame(tick);
+    }
+
+    if (!reduceMotion) {
+      window.addEventListener("pointermove", function (e) {
+        if (e.pointerType && e.pointerType !== "mouse") return;
+        mx = e.clientX; my = e.clientY;
+        wake();
+      }, { passive: true });
+      document.documentElement.addEventListener("mouseleave", function () {
+        mx = -1e4; my = -1e4;   // Punkte gleiten zurück in Ruhelage
+        wake();
+      });
+    }
+    /* beim Scrollen wandern die Sektionsgrenzen — Farben nachziehen */
+    window.addEventListener("scroll", wake, { passive: true });
+
+    sectionConsumers.push(sizeGrid);
+    sizeGrid();
+  })();
 
   /* ---------- Prozess: Fortschritts-Pfad ---------- */
   /* Orangener Pfad füllt sich beim Scrollen entlang der Timeline; jeder Knoten

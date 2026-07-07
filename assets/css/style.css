@@ -89,6 +89,19 @@ body.no-scroll { overflow: hidden; }
 .berg__svg--dark path { fill: #000; }
 /* während das Fullscreen-Menü offen ist, tritt der Berg zurück */
 body.no-scroll .berg { opacity: 0; transition: opacity .3s var(--ease); }
+
+/* ---------- Punkt-Raster (Canvas, per JS erzeugt) ---------- */
+/* Feines Raster hinter allen Inhalten; Punkte reagieren minimal auf den
+   Cursor (Anziehung mit weichem Falloff). Farbe je Sektion via JS. */
+.dotgrid {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 39;              /* über den Sektionsflächen, unter Berg (40) & Inhalt (41) */
+  pointer-events: none;
+}
+body.no-scroll .dotgrid { opacity: 0; transition: opacity .3s var(--ease); }
 /* Mobil: größer, damit der Gipfel wie am Desktop hoch in den Hero ragt */
 @media (max-width: 760px) {
   .berg { width: min(200vw, 760px); }
@@ -112,6 +125,9 @@ ul { list-style: none; }
 }
 
 .wrap {
+  position: relative;
+  z-index: 41;              /* aller Inhalt liegt über den Deko-Layern:
+                               Punkt-Raster (39) und Berg (40) bleiben Hintergrund */
   width: 100%;
   max-width: var(--maxw);
   margin-inline: auto;
