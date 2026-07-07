@@ -19,7 +19,7 @@
   --fg: var(--black);
 
   /* Typo */
-  --font-display: "Clash Display", "Arial Narrow", sans-serif;
+  --font-display: "Anton", "Arial Narrow", sans-serif;
   --font-body: "Satoshi", "Helvetica Neue", Arial, sans-serif;
 
   /* Spacing (8px-Grid) */
@@ -1875,6 +1875,75 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   text-align: center;
   padding: var(--s-7) var(--gutter);
 }
+
+/* ============================================================
+   POSTER-MODUS — Anton als Display-Schrift
+   Anton existiert in genau einem Schnitt (400) und lebt in
+   Versalien. Deshalb: Gewicht hart auf 400 (kein Faux-Bold),
+   Versalien + leicht positive Laufweite auf allen Display-
+   Elementen, und Zeilenabstände mit gezielter Luft für die
+   Umlaut-Punkte (Ä/Ö/Ü) — eng, aber ohne Kollision.
+   Liegt bewusst NACH allen Komponenten-Styles (überschreibt sie).
+   ============================================================ */
+
+/* Ein Gewicht für alles — Faux-Bold unterbinden */
+.menu__item a, .hero__title, .lst__cat-title, .prc__step-num, .prc__step-title,
+.pf__label-name, .abt__statement, .abt__sign-name, .cnt__title,
+.legal__title, .legal__block h2, .legal__block h3,
+.case__title, .case__lead, .case__split-head, .case__quote-text,
+.case__next-name, .case__cta-title, .nf__title, .ft__claim, .section-stub {
+  font-weight: 400;
+  font-synthesis: none;
+}
+
+/* Versalien + Poster-Laufweite (große Momente & Marketing-Headlines) */
+.menu__item a, .hero__title, .lst__cat-title, .prc__step-title,
+.pf__label-name, .abt__statement, .cnt__title, .legal__title,
+.case__title, .case__lead, .case__split-head, .case__quote-text,
+.case__next-name, .case__cta-title, .nf__title, .ft__claim {
+  text-transform: uppercase;
+  letter-spacing: 0.008em;
+}
+/* kleine Display-Grade brauchen in Versalien etwas mehr Tracking */
+.pf__label-name { letter-spacing: 0.035em; }
+.ft__claim { letter-spacing: 0.04em; }
+
+/* — Zeilenabstände: Umlaut-Luft, Zeile für Zeile austariert — */
+.hero__title { line-height: 1.0; }
+/* Reveal-Masken clippen oben — Reserve für Ä/Ö/Ü-Punkte schaffen */
+.hero__title .line > span { padding-top: 0.14em; }
+.case__title-text { padding-top: 0.14em; }
+/* Menü: Anton baut höher — Grad etwas zurück, damit alle 6 Punkte in den
+   Viewport passen; Nummer wieder oben an die Versalkante gestellt */
+.menu__item a {
+  line-height: 1.0;
+  padding-top: 0.12em;
+  font-size: clamp(2.3rem, 7.2vw, 5rem);
+  align-items: flex-start;
+}
+.menu__item a .num { transform: translateY(0.55em); }
+.lst__cat-title { line-height: 1.1; }
+.prc__step-title { line-height: 1.12; }
+.abt__statement { line-height: 1.14; }
+.cnt__title { line-height: 1.08; }
+.legal__title { line-height: 1.04; }
+.case__title { line-height: 1.02; }
+.case__lead { line-height: 1.16; }
+.case__split-head { line-height: 1.16; }
+.case__quote-text { line-height: 1.22; }
+.case__next-name { line-height: 1.12; }
+.case__cta-title { line-height: 1.12; }
+.nf__title { line-height: 1.08; }
+
+/* — bewusste Ausnahmen vom Versal-Prinzip — */
+/* Rechtsseiten: lange juristische Überschriften bleiben gemischt (Lesbarkeit) */
+.legal__block h2, .legal__block h3 { text-transform: none; letter-spacing: 0.012em; }
+.legal__block h2 { line-height: 1.2; }
+.legal__block h3 { line-height: 1.28; }
+/* Kontakt-Direktwerte (E-Mail/Telefon): ruhige Utility statt Poster-Schrift */
+.cnt__direct-val { font-family: var(--font-body); font-weight: 500; }
+/* Signatur: gemischte Schreibung — bleibt persönliche Geste, kein Plakat */
+.abt__sign-name { text-transform: none; letter-spacing: 0.015em; line-height: 1.1; }
 
 /* ============================================================
    RESPONSIVE

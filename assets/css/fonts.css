@@ -1,4 +1,13 @@
-/* === Clash Display (Headlines) === */
+/* === Anton (Headlines — Poster-Grotesk, ein Schnitt, lebt in Versalien) === */
+@font-face {
+  font-family: "Anton";
+  src: url("../fonts/Anton-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* === Clash Display (nicht mehr im Einsatz — nur noch Referenz für font-test.html) === */
 @font-face {
   font-family: "Clash Display";
   src: url("../fonts/ClashDisplay-Variable.woff2") format("woff2-variations");
