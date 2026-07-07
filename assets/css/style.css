@@ -49,7 +49,10 @@ body {
   color: var(--fg);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  /* text-rendering: auto statt optimizeLegibility — Kerning/Ligaturen sind in
+     modernen Browsern ohnehin aktiv; optimizeLegibility provoziert beim Scrollen
+     Re-Rasterisierung (sichtbares Buchstaben-Flackern bei fetten Glyphen). */
+  text-rendering: auto;
   overflow-x: hidden;
 }
 
@@ -1913,6 +1916,17 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 /* Reveal-Masken clippen oben — Reserve für Ä/Ö/Ü-Punkte schaffen */
 .hero__title .line > span { padding-top: 0.14em; }
 .case__title-text { padding-top: 0.14em; }
+/* Glyphen-Raster stabilisieren: Die großen Versal-Blöcke bekommen einen
+   dauerhaften eigenen Compositor-Layer (sie animieren ihre transform ohnehin
+   beim Reveal). Ohne den Layer rastert der Browser die Buchstaben beim
+   Scrollen über dem animierten Blend-Berg jeden Frame neu — sichtbares
+   „Wackeln" an fetten Stämmen/Diagonalen (Anton-N). */
+.hero__title .line > span,
+.case__title-text,
+.menu__item a {
+  will-change: transform;
+  backface-visibility: hidden;
+}
 /* Menü: Anton baut höher — Grad etwas zurück, damit alle 6 Punkte in den
    Viewport passen; Nummer wieder oben an die Versalkante gestellt */
 .menu__item a {

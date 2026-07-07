@@ -127,14 +127,17 @@
       berg.style.setProperty("--berg-op", "0.048");
     } else {
       var bergTicking = false;
+      var lastBergScale = "", lastBergOp = "";
 
       function updateBerg() {
         var vh = window.innerHeight;
         var p = Math.min(1, Math.max(0, window.pageYOffset / vh)); // 0..1 übers 1. Viewport
-        var scale = 1 - p * (1 - BERG_PARKED); // 1 (Hero) -> 0.52 (Ecke)
-        var op = 0.06 - p * (0.06 - 0.048);    // Hero 0.06 -> Sand 0.048
-        berg.style.setProperty("--berg-scale", scale.toFixed(3));
-        berg.style.setProperty("--berg-op", op.toFixed(4));
+        var scale = (1 - p * (1 - BERG_PARKED)).toFixed(3); // 1 (Hero) -> 0.52 (Ecke)
+        var op = (0.06 - p * (0.06 - 0.048)).toFixed(4);    // Hero 0.06 -> Sand 0.048
+        /* nur bei echter Änderung schreiben — verhindert Compositor-Invalidierung
+           bei jedem Scroll-Frame (Text-Flackern), v.a. jenseits des ersten Viewports */
+        if (scale !== lastBergScale) { berg.style.setProperty("--berg-scale", scale); lastBergScale = scale; }
+        if (op !== lastBergOp) { berg.style.setProperty("--berg-op", op); lastBergOp = op; }
         bergTicking = false;
       }
 
