@@ -111,43 +111,91 @@
   applyLang(saved);
 
   /* ---------- Globales Berg-Leitmotiv ---------- */
-  /* Ein einziger Berg: startet in exakter Hero-Größe und skaliert übers erste
-     Viewport in die untere rechte Ecke — von da an der „wandernde" Berg für die
-     ganze Seite. Die Farbe macht mix-blend-mode (pixelgenau pro Sektion). */
+  /* Ein Berg, zwei Farbschichten: weiß auf dunklen Sektionen, schwarz auf Sand.
+     Die Sektions-Hintergründe werden einmal vermessen (Luminanz); beim Scrollen
+     crossfaden nur noch zwei Opacity-Werte an den Sektionsgrenzen.
+     Ersetzt mix-blend-mode: difference — der Blend-Layer zwang den Browser,
+     die Headlines beim Scrollen permanent mitzukompositieren (Glyphen-Flackern). */
   var berg = document.querySelector(".berg");
   var reduceMotion = window.matchMedia
     ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
     : false;
 
-  var BERG_PARKED = 0.52; // End-Skalierung (≈ alte Eckgröße)
+  var BERG_PARKED = 0.52;    // End-Skalierung (≈ Eckgröße)
+  var BERG_LIGHT_OP = 0.06;  // weißer Berg auf dunklen Sektionen
+  var BERG_DARK_OP = 0.05;   // schwarzer Berg auf Sand-Sektionen
+  var BERG_FADE = 180;       // Übergangszone an Sektionsgrenzen (px)
 
   if (berg) {
+    var bergLight = berg.querySelector(".berg__svg--light");
+    var bergDark = berg.querySelector(".berg__svg--dark");
+    var bergSections = [];
+    var bergLast = { s: "", l: "", d: "" };
+    var bergTicking = false;
+
+    /* Sektions-Oberkanten + Helligkeit (Luminanz des Hintergrunds) einsammeln */
+    function collectBergSections() {
+      bergSections = [];
+      document.querySelectorAll("main > section, footer").forEach(function (s) {
+        var m = getComputedStyle(s).backgroundColor.match(/\d+(\.\d+)?/g);
+        var lum = m ? (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255 : 1;
+        bergSections.push({
+          top: s.getBoundingClientRect().top + window.pageYOffset,
+          dark: lum < 0.5
+        });
+      });
+      bergSections.sort(function (a, b) { return a.top - b.top; });
+    }
+
+    function updateBerg() {
+      var vh = window.innerHeight;
+
+      /* 1) Parallax-Skalierung übers erste Viewport (entfällt bei reduced-motion) */
+      if (!reduceMotion) {
+        var p = Math.min(1, Math.max(0, window.pageYOffset / vh));
+        var scale = (1 - p * (1 - BERG_PARKED)).toFixed(3);
+        if (scale !== bergLast.s) { berg.style.setProperty("--berg-scale", scale); bergLast.s = scale; }
+      }
+
+      /* 2) Farbschicht passend zur Sektion in der Berg-Zone (unteres Viewport) */
+      if (bergLight && bergDark && bergSections.length) {
+        var sample = window.pageYOffset + vh * 0.85;
+        var cur = bergSections[0], next = null;
+        for (var i = 0; i < bergSections.length; i++) {
+          if (bergSections[i].top <= sample) { cur = bergSections[i]; }
+          else { next = bergSections[i]; break; }
+        }
+        var lightAmt = cur.dark ? 1 : 0;
+        if (next && next.dark !== cur.dark) {
+          var d = next.top - sample;
+          if (d < BERG_FADE) {
+            var mix = 1 - d / BERG_FADE;
+            lightAmt = (cur.dark ? 1 : 0) * (1 - mix) + (next.dark ? 1 : 0) * mix;
+          }
+        }
+        var lOp = (BERG_LIGHT_OP * lightAmt).toFixed(4);
+        var dOp = (BERG_DARK_OP * (1 - lightAmt)).toFixed(4);
+        if (lOp !== bergLast.l) { bergLight.style.opacity = lOp; bergLast.l = lOp; }
+        if (dOp !== bergLast.d) { bergDark.style.opacity = dOp; bergLast.d = dOp; }
+      }
+      bergTicking = false;
+    }
+
+    function onBergScroll() {
+      if (!bergTicking) { window.requestAnimationFrame(updateBerg); bergTicking = true; }
+    }
+
     if (reduceMotion) {
       berg.style.setProperty("--berg-scale", String(BERG_PARKED));
-      berg.style.setProperty("--berg-op", "0.048");
-    } else {
-      var bergTicking = false;
-      var lastBergScale = "", lastBergOp = "";
+    }
 
-      function updateBerg() {
-        var vh = window.innerHeight;
-        var p = Math.min(1, Math.max(0, window.pageYOffset / vh)); // 0..1 übers 1. Viewport
-        var scale = (1 - p * (1 - BERG_PARKED)).toFixed(3); // 1 (Hero) -> 0.52 (Ecke)
-        var op = (0.06 - p * (0.06 - 0.048)).toFixed(4);    // Hero 0.06 -> Sand 0.048
-        /* nur bei echter Änderung schreiben — verhindert Compositor-Invalidierung
-           bei jedem Scroll-Frame (Text-Flackern), v.a. jenseits des ersten Viewports */
-        if (scale !== lastBergScale) { berg.style.setProperty("--berg-scale", scale); lastBergScale = scale; }
-        if (op !== lastBergOp) { berg.style.setProperty("--berg-op", op); lastBergOp = op; }
-        bergTicking = false;
-      }
-
-      function onBergScroll() {
-        if (!bergTicking) { window.requestAnimationFrame(updateBerg); bergTicking = true; }
-      }
-
-      updateBerg();
-      window.addEventListener("scroll", onBergScroll, { passive: true });
-      window.addEventListener("resize", updateBerg);
+    collectBergSections();
+    updateBerg();
+    window.addEventListener("scroll", onBergScroll, { passive: true });
+    window.addEventListener("resize", function () { collectBergSections(); updateBerg(); });
+    window.addEventListener("load", function () { collectBergSections(); updateBerg(); });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { collectBergSections(); updateBerg(); });
     }
   }
 

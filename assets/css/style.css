@@ -59,10 +59,12 @@ body {
 body.no-scroll { overflow: hidden; }
 
 /* ---------- Globales Berg-Leitmotiv ---------- */
-/* Liegt als feiner Layer über der Seite; mix-blend-mode: difference passt die
-   Farbe pixelgenau an jeden Hintergrund an — auf Sand dunkelt er, auf Schwarz
-   hellt er auf, exakt an der Sektionsgrenze, ganz ohne Scroll-Farb-Logik.
-   Die Position (--berg-y) steuert das Parallax-Wandern per JS. */
+/* Ein Berg, zwei Farbschichten übereinander: weiß für dunkle Sektionen,
+   schwarz für Sand. JS vermisst die Sektions-Hintergründe (Luminanz) und
+   crossfadet beim Scrollen nur die beiden Opacity-Werte.
+   Bewusst KEIN mix-blend-mode mehr: der Blend-Layer zwang den Browser,
+   die Headlines beim Scrollen permanent mitzukompositieren — sichtbares
+   Glyphen-Flackern (v. a. bei fetten Anton-Stämmen). */
 .berg {
   position: fixed;
   right: clamp(-80px, -4vw, -10px);
@@ -70,19 +72,23 @@ body.no-scroll { overflow: hidden; }
   width: clamp(460px, 64vw, 1180px);   /* Start = exakte Hero-Größe */
   pointer-events: none;
   z-index: 40;
-  mix-blend-mode: difference;
-  opacity: var(--berg-op, 0.06);       /* Hero 0.06, Sand minimal dezenter (per JS) */
+  display: grid;                       /* beide Schichten deckungsgleich stapeln */
   will-change: transform;
   transform-origin: 100% 100%;         /* schrumpft in die untere rechte Ecke */
   transform: scale(var(--berg-scale, 1));
 }
-.berg__svg { width: 100%; height: auto; }
-.berg__svg path { fill: #fff; }
-/* während das Fullscreen-Menü offen ist, tritt der Berg zurück.
-   mix-blend-mode wird abgeschaltet: der Blend-Layer erzwingt sonst bei jedem
-   Repaint (z. B. Farb-Hover im Menü) teures Re-Compositing -> ruckelnde Animation.
-   Der dunkle Menü-Hintergrund deckt ohnehin alles ab, der Blend ist hier unnötig. */
-body.no-scroll .berg { opacity: 0; mix-blend-mode: normal; transition: opacity .3s var(--ease); }
+.berg__svg {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: auto;
+  transition: opacity .3s linear;      /* glättet die Crossfade-Schritte */
+}
+.berg__svg--light { opacity: 0.06; }   /* Startzustand: dunkler Hero */
+.berg__svg--light path { fill: #fff; }
+.berg__svg--dark { opacity: 0; }
+.berg__svg--dark path { fill: #000; }
+/* während das Fullscreen-Menü offen ist, tritt der Berg zurück */
+body.no-scroll .berg { opacity: 0; transition: opacity .3s var(--ease); }
 /* Mobil: größer, damit der Gipfel wie am Desktop hoch in den Hero ragt */
 @media (max-width: 760px) {
   .berg { width: min(200vw, 760px); }
@@ -351,14 +357,15 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 }
 .hero.is-in .hero__title .line:nth-child(1) > span { transition-delay: .15s; }
 .hero.is-in .hero__title .line:nth-child(2) > span { transition-delay: .28s; }
-/* Oranger Signatur-Punkt: kleines Quadrat, nicht dicker als die Strichstärke */
+/* Oranger Satzpunkt: echter Punkt in der Headline-Schrift, nur eingefärbt */
 .hero__title .line .accent-dot {
   display: inline-block;
-  width: 0.14em;            /* Größe eines Headline-Satzpunktes (~0.175em), minus 20% */
-  height: 0.14em;
+  width: auto;
+  height: auto;
   padding-bottom: 0;        /* erbt sonst die Unterlängen-Reserve der Zeile */
-  margin-left: 0.07em;
-  background: var(--accent);
+  margin-left: 0.02em;
+  background: none;
+  color: var(--accent);
   vertical-align: baseline;
   transform: translateY(0);
   opacity: 0;
