@@ -347,6 +347,19 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   gap: 6px;
   color: rgba(255,231,182,0.7);
 }
+/* Verfügbarkeits-Badge: pulsierender Punkt + Label (Realness-Detail) */
+.hero__avail { display: inline-flex; align-items: center; gap: 8px; }
+.avail-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: availPulse 2.4s ease-in-out infinite;
+}
+@keyframes availPulse {
+  0%, 100% { opacity: .45; transform: scale(.85); }
+  50%      { opacity: 1;   transform: scale(1); }
+}
 
 .hero__main { position: relative; z-index: 41; margin-top: var(--s-4); }
 
@@ -1860,6 +1873,13 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   letter-spacing: 0.02em;
   color: rgba(255, 231, 182, 0.45);
 }
+/* Lokalzeit Hamburg (JS tickt sekündlich) */
+.ft__time {
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  color: rgba(255, 231, 182, 0.45);
+  font-variant-numeric: tabular-nums;   /* Ziffern gleich breit — tickt ohne Zittern */
+}
 .ft__top {
   display: inline-flex;
   align-items: center;
@@ -1882,9 +1902,11 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 
 @media (max-width: 700px) {
   /* Spalten bleiben dreispaltig & am Logo orientiert; Meta bleibt wie auf Desktop
-     nebeneinander: Copyright links, „Nach oben" rechts (kein Stapeln/Überlappen). */
+     nebeneinander: Copyright links, „Nach oben" rechts (kein Stapeln/Überlappen).
+     Die Lokalzeit ist ein Desktop-Detail — mobil würde die Zeile überlaufen. */
   .ft__meta { flex-wrap: nowrap; gap: 12px; }
   .ft__copy, .ft__top { white-space: nowrap; }
+  .ft__time { display: none; }
 }
 
 /* ============================================================
@@ -1983,6 +2005,62 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 .abt__sign-name { text-transform: none; letter-spacing: 0.015em; line-height: 1.1; }
 
 /* ============================================================
+   ANZIEHUNG — Custom Cursor · Magnetik · Wort-Reveals
+   Interaktions-Metapher der Seite: Punkt-Raster, Cursor-Punkt und
+   Buttons folgen derselben sanften Anziehungs-Physik. Der Cursor
+   ist konzeptionell der orange Signaturpunkt des Claims.
+   ============================================================ */
+.cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 300;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid transparent;
+  pointer-events: none;
+  transition: width .25s var(--ease), height .25s var(--ease),
+              background .25s var(--ease), border-color .25s var(--ease),
+              opacity .2s ease;
+}
+/* über Interaktivem: blüht zum Ring auf */
+.cursor.is-link {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 90, 0, 0.12);
+  border-color: var(--accent);
+}
+.cursor.is-down { width: 22px; height: 22px; }
+.cursor.is-hidden { opacity: 0; }
+/* nativer Cursor aus — Formularfelder behalten ihren (Text-Caret!) */
+.has-cursor, .has-cursor a, .has-cursor button { cursor: none; }
+.has-cursor input, .has-cursor textarea,
+.has-cursor select, .has-cursor label { cursor: auto; }
+
+/* Magnetische Elemente: weiches Nachziehen + Zurückfedern */
+.magnetic { transition: transform .3s var(--ease); }
+
+/* — Wort-für-Wort-Reveal (nur die großen Statements, [data-words]) — */
+/* Block-Reveal aus: die Wort-Masken übernehmen die Inszenierung */
+[data-words][data-reveal] { opacity: 1; transform: none; transition: none; }
+[data-words] .w {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* Umlaut-Reserve oben, Komma-Reserve unten — Margins kompensieren das Layout */
+  padding: 0.14em 0 0.08em;
+  margin: -0.14em 0 -0.08em;
+}
+[data-words] .w-in {
+  display: inline-block;
+  transform: translateY(115%);
+  transition: transform .7s var(--ease);
+}
+[data-words].is-revealed .w-in { transform: translateY(0); }
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 @media (max-width: 640px) {
@@ -2037,5 +2115,6 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   .case__title-text,
   .case__hero .case__subline,
   .case__hero .case__facts { opacity: 1 !important; transform: none !important; }
+  [data-words] .w-in { transform: none !important; }
   .menu__item a { transform: none; }
 }

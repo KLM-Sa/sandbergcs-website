@@ -102,6 +102,9 @@
       b.classList.toggle("is-active", b.getAttribute("data-lang") === lang);
     });
     try { localStorage.setItem(STORE_KEY, lang); } catch (e) {}
+    /* Wort-Reveal-Spans neu aufbauen — der textContent-Ersatz oben zerstört sie.
+       (Funktionsdeklaration weiter unten, per Hoisting hier bereits verfügbar.) */
+    resplitWords();
   }
   langButtons.forEach(function (b) {
     b.addEventListener("click", function () { applyLang(b.getAttribute("data-lang")); });
@@ -323,6 +326,137 @@
     sectionConsumers.push(sizeGrid);
     sizeGrid();
   })();
+
+  /* ---------- Wort-für-Wort-Reveal (nur die großen Statements) ---------- */
+  /* Elemente mit [data-words] werden in maskierte Wort-Spans zerlegt; der
+     bestehende IntersectionObserver (is-revealed) triggert den gestaffelten
+     Einlauf. Nach jedem Sprachwechsel baut applyLang() die Spans neu auf —
+     bereits sichtbare Statements spielen den Reveal dann erneut (gewollt).
+     Funktionsdeklaration (Hoisting): applyLang ruft sie schon beim Init. */
+  function resplitWords() {
+    var rm = window.matchMedia
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (rm) return;
+
+    document.querySelectorAll("[data-words]").forEach(function (el) {
+      /* Text-Hosts: das Element selbst (wenn es data-de trägt) oder seine
+         data-de-Kinder (z. B. Spans + em im Über-mich-Leitsatz) */
+      var hosts = el.hasAttribute("data-de") ? [el]
+        : Array.prototype.slice.call(el.querySelectorAll("[data-de]"));
+      if (!hosts.length) return;
+
+      var wordIndex = 0;
+      hosts.forEach(function (host) {
+        var raw = host.textContent;
+        /* Rand-Leerzeichen erhalten — sie trennen die Hosts voneinander
+           (z. B. „eine “ + em „Person“ + „ — kein …“) */
+        var leading = /^\s/.test(raw);
+        var trailing = /\s$/.test(raw);
+        var words = raw.trim().split(/\s+/).filter(Boolean);
+        host.textContent = "";
+        if (leading) host.appendChild(document.createTextNode(" "));
+        words.forEach(function (word, i) {
+          if (i > 0) host.appendChild(document.createTextNode(" "));
+          var w = document.createElement("span");
+          w.className = "w";
+          var inner = document.createElement("span");
+          inner.className = "w-in";
+          inner.textContent = word;
+          inner.style.transitionDelay = (wordIndex * 0.045).toFixed(3) + "s";
+          w.appendChild(inner);
+          host.appendChild(w);
+          wordIndex++;
+        });
+        if (trailing) host.appendChild(document.createTextNode(" "));
+      });
+
+      /* Bereits enthüllte Statements: Reveal einmal neu abspielen */
+      if (el.classList.contains("is-revealed")) {
+        el.classList.remove("is-revealed");
+        void el.offsetWidth;   // Reflow erzwingen, damit die Transition greift
+        setTimeout(function () { el.classList.add("is-revealed"); }, 30);
+      }
+    });
+  }
+
+  /* ---------- Footer: Lokalzeit Hamburg (Realness-Detail) ---------- */
+  var timeEls = document.querySelectorAll(".ft__time-val");
+  if (timeEls.length && window.Intl && Intl.DateTimeFormat) {
+    var timeFmt = new Intl.DateTimeFormat("de-DE", {
+      timeZone: "Europe/Berlin",
+      hour: "2-digit", minute: "2-digit", second: "2-digit"
+    });
+    var tickClock = function () {
+      var t = timeFmt.format(new Date());
+      timeEls.forEach(function (el) { el.textContent = t; });
+    };
+    tickClock();
+    setInterval(tickClock, 1000);
+  }
+
+  /* ---------- Custom Cursor + magnetische Elemente („Anziehung") ---------- */
+  /* Dritter Baustein der Anziehungs-Metapher (neben der Raster-Gravitation):
+     Der orange Cursor-Punkt — konzeptionell der Signaturpunkt des Claims —
+     folgt der Maus mit weichem Nachlauf und blüht über Interaktivem zum Ring
+     auf. Buttons ziehen sich dem Cursor leicht entgegen und federn zurück.
+     Nur für feine Zeiger (Maus); entfällt bei reduced-motion. */
+  var finePointer = window.matchMedia
+    && window.matchMedia("(pointer: fine)").matches;
+  if (finePointer && !reduceMotion) {
+    var cursorEl = document.createElement("div");
+    cursorEl.className = "cursor is-hidden";
+    cursorEl.setAttribute("aria-hidden", "true");
+    document.body.appendChild(cursorEl);
+    document.documentElement.classList.add("has-cursor");
+
+    var curX = -100, curY = -100, tgtX = -100, tgtY = -100;
+    var curRaf = null;
+
+    function cursorFrame() {
+      curX += (tgtX - curX) * 0.22;
+      curY += (tgtY - curY) * 0.22;
+      cursorEl.style.transform =
+        "translate3d(" + curX.toFixed(1) + "px," + curY.toFixed(1) + "px,0) translate(-50%,-50%)";
+      curRaf = (Math.abs(tgtX - curX) > 0.15 || Math.abs(tgtY - curY) > 0.15)
+        ? window.requestAnimationFrame(cursorFrame)
+        : null;
+    }
+
+    window.addEventListener("pointermove", function (e) {
+      if (e.pointerType && e.pointerType !== "mouse") return;
+      tgtX = e.clientX; tgtY = e.clientY;
+      cursorEl.classList.remove("is-hidden");
+      if (curRaf === null) curRaf = window.requestAnimationFrame(cursorFrame);
+    }, { passive: true });
+
+    /* Zustände per Delegation: Ring über Interaktivem, unsichtbar über Feldern */
+    document.addEventListener("mouseover", function (e) {
+      if (e.target.closest("input, textarea, select, label")) {
+        cursorEl.classList.add("is-hidden");
+        return;
+      }
+      cursorEl.classList.remove("is-hidden");
+      cursorEl.classList.toggle("is-link", !!e.target.closest("a, button, .pf__item"));
+    });
+    document.documentElement.addEventListener("mouseleave", function () {
+      cursorEl.classList.add("is-hidden");
+    });
+    window.addEventListener("mousedown", function () { cursorEl.classList.add("is-down"); });
+    window.addEventListener("mouseup", function () { cursorEl.classList.remove("is-down"); });
+
+    /* Magnetik: Buttons folgen dem Cursor minimal (28 % des Versatzes) */
+    document.querySelectorAll(".btn, .burger").forEach(function (el) {
+      el.classList.add("magnetic");
+      el.addEventListener("mousemove", function (e) {
+        var r = el.getBoundingClientRect();
+        var dx = e.clientX - (r.left + r.width / 2);
+        var dy = e.clientY - (r.top + r.height / 2);
+        el.style.transform =
+          "translate(" + (dx * 0.28).toFixed(1) + "px," + (dy * 0.28).toFixed(1) + "px)";
+      });
+      el.addEventListener("mouseleave", function () { el.style.transform = ""; });
+    });
+  }
 
   /* ---------- Prozess: Fortschritts-Pfad ---------- */
   /* Orangener Pfad füllt sich beim Scrollen entlang der Timeline; jeder Knoten
