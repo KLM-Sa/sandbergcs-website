@@ -223,13 +223,13 @@
      erzeugt, es braucht kein Markup. Die rAF-Schleife läuft nur, solange sich
      tatsächlich etwas bewegt; bei reduced-motion bleibt das Raster statisch. */
   (function () {
-    var SPACING = 32;        // Rasterweite (px)
-    var DOT_R = 1;           // Punktradius (px)
-    var PULL_RADIUS = 260;   // Wirkradius des Cursors (px)
-    var PULL_MAX = 9;        // maximale Verschiebung zum Cursor (px)
+    var SPACING = 25;        // Rasterweite (px) — fein, nah an der Referenz
+    var DOT_R = 0.9;         // Punktradius (px)
+    var PULL_RADIUS = 240;   // Wirkradius des Cursors (px)
+    var PULL_MAX = 8;        // maximale Verschiebung zum Cursor (px)
     var EASE = 0.14;         // Nachlauf der Punkte (0..1)
-    var A_LIGHT = 0.16;      // Alpha: helle Punkte auf dunklen Sektionen
-    var A_DARK = 0.12;       // Alpha: dunkle Punkte auf Sand
+    var A_LIGHT = 0.14;      // Alpha: helle Punkte auf dunklen Sektionen
+    var A_DARK = 0.11;       // Alpha: dunkle Punkte auf Sand
     var A_BOOST = 0.10;      // leichte Betonung im Cursor-Umfeld
 
     var canvas = document.createElement("canvas");
