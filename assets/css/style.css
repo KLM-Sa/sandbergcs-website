@@ -81,7 +81,9 @@ body.no-scroll { overflow: hidden; }
   display: grid;                       /* beide Schichten deckungsgleich stapeln */
   will-change: transform;
   transform-origin: 100% 100%;         /* schrumpft in die untere rechte Ecke */
-  transform: scale(var(--berg-scale, 1));
+  /* --berg-y: hebt den Berg auf Seiten mit kurzem Hero an, sodass er wie auf
+     der Startseite mit der Hero-Unterkante abschließt (JS misst, 0 bei 100svh) */
+  transform: translateY(var(--berg-y, 0px)) scale(var(--berg-scale, 1));
 }
 .berg__svg {
   grid-area: 1 / 1;
@@ -353,8 +355,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   gap: 6px;
   color: rgba(255,231,182,0.7);
 }
-/* Verfügbarkeits-Badge: pulsierender Punkt + Label (Realness-Detail) */
-.hero__avail { display: inline-flex; align-items: center; gap: 8px; }
+/* Verfügbarkeits-Badge: pulsierender Punkt (Label sitzt bei den Hero-Actions) */
 .avail-dot {
   width: 7px;
   height: 7px;
@@ -483,6 +484,16 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   0%,100% { transform: rotate(45deg) translate(-2px,-2px); opacity: .45; }
   50%     { transform: rotate(45deg) translate(2px,2px);   opacity: 1; }
 }
+
+/* CTA-Gruppe: Verfügbarkeits-Badge sitzt beim Button (Status -> Handlung) */
+.hero__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+.hero__avail { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,231,182,0.7); opacity: 0; }
+.hero.is-in .hero__avail { opacity: 1; transition: opacity .9s var(--ease) .7s; }
 
 /* CTA Button */
 .btn {
@@ -964,40 +975,27 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 }
 .abt__text > p + p { margin-top: clamp(18px, 2.4vh, 30px); }
 
-/* Signatur — Berg als Siegel + Namenszug (Ersatz fürs Portrait) */
+/* Signatur — rein typografisch (Ersatz fürs Portrait): Name im Headline-
+   System der Seite, abgeschlossen mit dem orangen Signaturpunkt des Claims.
+   Kein Icon, kein Schräglauf — dieselbe Sprache wie die großen Statements. */
 .abt__sign {
   display: flex;
-  align-items: center;
-  gap: clamp(16px, 1.8vw, 26px);
+  flex-direction: column;
+  gap: 10px;
   margin-top: clamp(40px, 6vh, 80px);
   padding-top: clamp(28px, 4vh, 48px);
   border-top: 1px solid var(--sand-line);
 }
-.abt__seal {
-  flex: 0 0 auto;
-  width: clamp(50px, 5vw, 66px);
-  height: clamp(50px, 5vw, 66px);
-  display: grid;
-  place-items: center;
-  background: var(--sand-soft);
-  border: 1px solid var(--sand-line);
-  border-radius: 50%;
-}
-/* Dreieck ist optisch bodenlastig (Schwerpunkt unter der Box-Mitte) –
-   leichter Nudge nach oben, damit der Berg im Kreis mittig wirkt. */
-.abt__seal svg { width: 54%; height: auto; transform: translateY(-9%); }
-.abt__sign-text { display: flex; flex-direction: column; }
 .abt__sign-name {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(1.7rem, 3.4vw, 2.6rem);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
   line-height: 1;
-  letter-spacing: -0.01em;
-  transform: skewX(-7deg);          /* leichter Schräglauf = Signatur-Geste */
-  transform-origin: left center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
+.abt__sign-name .accent-period { color: var(--accent); }
 .abt__sign-role {
-  margin-top: 0.55em;
   font-family: var(--font-body);
   font-size: 0.78rem;
   text-transform: uppercase;
@@ -1852,15 +1850,19 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 
 /* 3) Meta-Leiste */
 .ft__meta {
-  display: flex;
+  /* 1fr | auto | 1fr: die Lokalzeit sitzt exakt in der Seitenmitte —
+     bündig mit der zentrierten „Rechtliches"-Spalte darüber */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
   gap: 18px;
   margin-top: clamp(40px, 6vh, 72px);
   padding-top: clamp(20px, 3vh, 28px);
   border-top: 1px solid rgba(255, 231, 182, 0.1);
 }
+.ft__meta .ft__copy { justify-self: start; }
+.ft__meta .ft__time { justify-self: center; text-align: center; }
+.ft__meta .ft__top { justify-self: end; }
 .ft__copy {
   font-size: 0.8rem;
   letter-spacing: 0.02em;
@@ -1961,7 +1963,12 @@ body.no-scroll .nav { mix-blend-mode: normal; }
    „Wackeln" an fetten Stämmen/Diagonalen (Anton-N). */
 .hero__title .line > span,
 .case__title-text,
-.menu__item a {
+.menu__item a,
+.case__lead,
+.case__split-head,
+.case__next-name,
+.case__cta-title,
+[data-words] .w-in {
   will-change: transform;
   backface-visibility: hidden;
 }
@@ -1994,8 +2001,6 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 .legal__block h3 { line-height: 1.28; }
 /* Kontakt-Direktwerte (E-Mail/Telefon): ruhige Utility statt Poster-Schrift */
 .cnt__direct-val { font-family: var(--font-body); font-weight: 500; }
-/* Signatur: gemischte Schreibung — bleibt persönliche Geste, kein Plakat */
-.abt__sign-name { text-transform: none; letter-spacing: 0.015em; line-height: 1.1; }
 
 /* ============================================================
    ANZIEHUNG — Custom Cursor · Magnetik · Wort-Reveals
@@ -2120,6 +2125,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   .hero__title .line > span,
   .hero__subline,
   .hero__cue,
+  .hero__avail,
   .case__hero .case__back,
   .case__hero .case__kicker,
   .case__title-text,

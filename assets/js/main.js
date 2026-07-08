@@ -168,7 +168,7 @@
   if (berg) {
     var bergLight = berg.querySelector(".berg__svg--light");
     var bergDark = berg.querySelector(".berg__svg--dark");
-    var bergLast = { s: "", l: "", d: "" };
+    var bergLast = { s: "", y: "", l: "", d: "" };
     var bergTicking = false;
 
     function updateBerg() {
@@ -179,6 +179,14 @@
         var p = Math.min(1, Math.max(0, window.pageYOffset / vh));
         var scale = (1 - p * (1 - BERG_PARKED)).toFixed(3);
         if (scale !== bergLast.s) { berg.style.setProperty("--berg-scale", scale); bergLast.s = scale; }
+
+        /* 1b) Kurzer Hero (Projektseiten): Berg anheben, sodass er wie auf der
+           Startseite mit der Hero-Unterkante abschließt. Beim Scrollen gleitet
+           er in seine geparkte Lage am Viewport-Boden (Anteil (1 - p)).
+           Auf 100svh-Heros ist der Versatz 0 — Startseite bleibt unverändert. */
+        var heroBottom = pageSections.length > 1 ? pageSections[1].top : vh;
+        var y = (Math.min(0, heroBottom - vh) * (1 - p)).toFixed(1) + "px";
+        if (y !== bergLast.y) { berg.style.setProperty("--berg-y", y); bergLast.y = y; }
       }
 
       /* 2) Farbschicht passend zur Sektion in der Berg-Zone (unteres Viewport) */
@@ -197,8 +205,12 @@
             lightAmt = (cur.dark ? 1 : 0) * (1 - mix) + (next.dark ? 1 : 0) * mix;
           }
         }
-        var lOp = (BERG_LIGHT_OP * lightAmt).toFixed(4);
-        var dOp = (BERG_DARK_OP * (1 - lightAmt)).toFixed(4);
+        /* Wurzel-Kurven statt linear: in der Übergangszone bleiben BEIDE
+           Schichten kräftig (Mitte: je ~71 % statt 50 %) — der Berg wirkt nie
+           „halb verschwunden". Die jeweils falsche Schicht ist auf ihrem
+           Hintergrund ohnehin nahezu unsichtbar (weiß auf Sand / schwarz auf Ink). */
+        var lOp = (BERG_LIGHT_OP * Math.sqrt(lightAmt)).toFixed(4);
+        var dOp = (BERG_DARK_OP * Math.sqrt(1 - lightAmt)).toFixed(4);
         if (lOp !== bergLast.l) { bergLight.style.opacity = lOp; bergLast.l = lOp; }
         if (dOp !== bergLast.d) { bergDark.style.opacity = dOp; bergLast.d = dOp; }
       }
@@ -320,8 +332,18 @@
         wake();
       });
     }
-    /* beim Scrollen wandern die Sektionsgrenzen — Farben nachziehen */
-    window.addEventListener("scroll", wake, { passive: true });
+    /* beim Scrollen wandern die Sektionsgrenzen — Farben nachziehen.
+       Gedrosselt auf Rasterband-Wechsel (alle SPACING px): das Canvas wird
+       nicht mehr pro Frame neu gezeichnet — weniger Paint-Last, kein
+       Mit-Flackern der Headlines beim Scrollen. */
+    var lastScrollBand = -1;
+    window.addEventListener("scroll", function () {
+      var band = Math.floor(window.pageYOffset / SPACING);
+      if (band !== lastScrollBand) {
+        lastScrollBand = band;
+        wake();
+      }
+    }, { passive: true });
 
     sectionConsumers.push(sizeGrid);
     sizeGrid();
