@@ -81,19 +81,19 @@ body.no-scroll { overflow: hidden; }
   display: grid;                       /* beide Schichten deckungsgleich stapeln */
   will-change: transform;
   transform-origin: 100% 100%;         /* schrumpft in die untere rechte Ecke */
-  /* --berg-y: hebt den Berg auf Seiten mit kurzem Hero an, sodass er wie auf
-     der Startseite mit der Hero-Unterkante abschließt (JS misst, 0 bei 100svh) */
-  transform: translateY(var(--berg-y, 0px)) scale(var(--berg-scale, 1));
+  transform: scale(var(--berg-scale, 1));
 }
 .berg__svg {
   grid-area: 1 / 1;
   width: 100%;
   height: auto;
-  transition: opacity .3s linear;      /* glättet die Crossfade-Schritte */
 }
-.berg__svg--light { opacity: 0.06; }   /* Startzustand: dunkler Hero */
+/* Beide Schichten sind permanent voll deckend — sichtbar ist je Bereich nur
+   die passende: JS clippt sie pixelgenau an der Sektionskante (clip-path).
+   So ist der Berg auch mitten im Übergang auf BEIDEN Hintergründen präsent. */
+.berg__svg--light { opacity: 0.06; }
 .berg__svg--light path { fill: #fff; }
-.berg__svg--dark { opacity: 0; }
+.berg__svg--dark { opacity: 0.05; clip-path: inset(0 0 100% 0); }
 .berg__svg--dark path { fill: #000; }
 /* während das Fullscreen-Menü offen ist, tritt der Berg zurück */
 body.no-scroll .berg { opacity: 0; transition: opacity .3s var(--ease); }
@@ -162,10 +162,13 @@ ul { list-style: none; }
   z-index: 100;
   display: flex;
   align-items: center;
-  color: var(--white);
+  color: var(--sand);
   transition: transform .5s var(--ease), color .4s ease;
-  mix-blend-mode: difference; /* Logo/Links bleiben auf jedem BG lesbar */
+  /* KEIN mix-blend-mode mehr: der Blend-Layer zwang den Browser, die ganze
+     Seite pro Scroll-Frame mitzukompositieren (Glyphen-Flackern). Die Farbe
+     wechselt stattdessen per Sektions-Logik (JS setzt .on-sand). */
 }
+.nav.on-sand { color: var(--black); }
 .nav.is-hidden { transform: translateY(-100%); }
 
 .nav__inner {
@@ -182,12 +185,13 @@ ul { list-style: none; }
 .nav__logo {
   display: flex;
   align-items: center;
-  color: var(--sand);
+  color: currentColor;
 }
 .nav__logo-mark {
   height: clamp(26px, 2.6vw, 34px);
   width: auto;
-  color: var(--sand);
+  color: currentColor;             /* folgt der Nav-Farbe (Sektions-Logik) */
+  transition: color .4s ease;
 }
 
 /* Rechte Seite: Sprache + Burger */
@@ -199,10 +203,10 @@ ul { list-style: none; }
   gap: 4px;
   font-weight: 500;
   font-size: 0.8rem;
-  color: #fff;
+  color: currentColor;
 }
 .lang button {
-  color: #fff;
+  color: currentColor;
   opacity: 0.5;
   padding: 2px 4px;
   transition: opacity .25s ease;
@@ -217,12 +221,12 @@ ul { list-style: none; }
   width: 44px; height: 44px;
   display: grid;
   place-items: center;
-  color: #fff;
+  color: currentColor;
 }
 .burger span {
   position: relative;
   width: 26px; height: 2px;
-  background: #fff;
+  background: currentColor;
   transition: background .3s ease;
 }
 .burger span::before,
@@ -230,7 +234,7 @@ ul { list-style: none; }
   content: "";
   position: absolute; left: 0;
   width: 26px; height: 2px;
-  background: #fff;
+  background: currentColor;
   transition: transform .4s var(--ease);
 }
 .burger span::before { top: -7px; }
@@ -259,8 +263,8 @@ ul { list-style: none; }
   transition: clip-path .7s var(--ease);
 }
 /* Bei offenem Menü den Blend-Mode der Nav neutralisieren (weiße Schrift auf
-   dunklem Menü bleibt lesbar). Verhindert teures Re-Compositing beim Hover. */
-body.no-scroll .nav { mix-blend-mode: normal; }
+   dunklem Menü bleibt lesbar) — unabhängig von der Sektions-Logik. */
+body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 
 .menu__list {
   align-self: center;
@@ -354,6 +358,15 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   flex-direction: column;
   gap: 6px;
   color: rgba(255,231,182,0.7);
+  width: 100%;
+}
+/* erste Meta-Zeile: Studio-Label links, Verfügbarkeits-Badge rechts */
+.hero__meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px 24px;
 }
 /* Verfügbarkeits-Badge: pulsierender Punkt (Label sitzt bei den Hero-Actions) */
 .avail-dot {

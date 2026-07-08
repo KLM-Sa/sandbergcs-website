@@ -161,58 +161,63 @@
     : false;
 
   var BERG_PARKED = 0.52;    // End-Skalierung (≈ Eckgröße)
-  var BERG_LIGHT_OP = 0.06;  // weißer Berg auf dunklen Sektionen
-  var BERG_DARK_OP = 0.05;   // schwarzer Berg auf Sand-Sektionen
-  var BERG_FADE = 180;       // Übergangszone an Sektionsgrenzen (px)
 
   if (berg) {
     var bergLight = berg.querySelector(".berg__svg--light");
     var bergDark = berg.querySelector(".berg__svg--dark");
-    var bergLast = { s: "", y: "", l: "", d: "" };
+    var bergLast = { s: "", lc: "", dc: "" };
     var bergTicking = false;
 
     function updateBerg() {
       var vh = window.innerHeight;
+      var p = Math.min(1, Math.max(0, window.pageYOffset / vh));
+      var scaleNum = reduceMotion ? BERG_PARKED : (1 - p * (1 - BERG_PARKED));
 
       /* 1) Parallax-Skalierung übers erste Viewport (entfällt bei reduced-motion) */
       if (!reduceMotion) {
-        var p = Math.min(1, Math.max(0, window.pageYOffset / vh));
-        var scale = (1 - p * (1 - BERG_PARKED)).toFixed(3);
+        var scale = scaleNum.toFixed(3);
         if (scale !== bergLast.s) { berg.style.setProperty("--berg-scale", scale); bergLast.s = scale; }
-
-        /* 1b) Kurzer Hero (Projektseiten): Berg anheben, sodass er wie auf der
-           Startseite mit der Hero-Unterkante abschließt. Beim Scrollen gleitet
-           er in seine geparkte Lage am Viewport-Boden (Anteil (1 - p)).
-           Auf 100svh-Heros ist der Versatz 0 — Startseite bleibt unverändert. */
-        var heroBottom = pageSections.length > 1 ? pageSections[1].top : vh;
-        var y = (Math.min(0, heroBottom - vh) * (1 - p)).toFixed(1) + "px";
-        if (y !== bergLast.y) { berg.style.setProperty("--berg-y", y); bergLast.y = y; }
       }
 
-      /* 2) Farbschicht passend zur Sektion in der Berg-Zone (unteres Viewport) */
+      /* 2) Farbschichten pixelgenau an der Sektionskante clippen.
+         Beide Schichten sind permanent voll deckend; sichtbar ist je Bereich
+         nur die passende (weiß über dunklen, schwarz über hellen Sektionen).
+         Der Berg bleibt so auch mitten im Übergang auf BEIDEN Hintergründen
+         präsent — ohne Blend-Layer, ohne Fade-Loch. */
       if (bergLight && bergDark && pageSections.length) {
-        var sample = window.pageYOffset + vh * 0.85;
-        var cur = pageSections[0], next = null;
-        for (var i = 0; i < pageSections.length; i++) {
-          if (pageSections[i].top <= sample) { cur = pageSections[i]; }
-          else { next = pageSections[i]; break; }
-        }
-        var lightAmt = cur.dark ? 1 : 0;
-        if (next && next.dark !== cur.dark) {
-          var d = next.top - sample;
-          if (d < BERG_FADE) {
-            var mix = 1 - d / BERG_FADE;
-            lightAmt = (cur.dark ? 1 : 0) * (1 - mix) + (next.dark ? 1 : 0) * mix;
+        var scrollY = window.pageYOffset;
+        var hEl = berg.offsetHeight;                 // untransformierte Höhe
+        var topV = vh - hEl * scaleNum;              // Oberkante im Viewport (origin unten)
+
+        /* Farbwechsel-Grenze im Berg-Bereich suchen (praktisch max. eine) */
+        var boundary = null, upperDark = true;
+        for (var i = 1; i < pageSections.length; i++) {
+          var by = pageSections[i].top - scrollY;
+          if (by <= topV) continue;
+          if (by >= vh) break;
+          if (pageSections[i].dark !== pageSections[i - 1].dark) {
+            boundary = by;
+            upperDark = pageSections[i - 1].dark;
+            break;
           }
         }
-        /* Wurzel-Kurven statt linear: in der Übergangszone bleiben BEIDE
-           Schichten kräftig (Mitte: je ~71 % statt 50 %) — der Berg wirkt nie
-           „halb verschwunden". Die jeweils falsche Schicht ist auf ihrem
-           Hintergrund ohnehin nahezu unsichtbar (weiß auf Sand / schwarz auf Ink). */
-        var lOp = (BERG_LIGHT_OP * Math.sqrt(lightAmt)).toFixed(4);
-        var dOp = (BERG_DARK_OP * Math.sqrt(1 - lightAmt)).toFixed(4);
-        if (lOp !== bergLast.l) { bergLight.style.opacity = lOp; bergLast.l = lOp; }
-        if (dOp !== bergLast.d) { bergDark.style.opacity = dOp; bergLast.d = dOp; }
+
+        var lClip, dClip;
+        var FULL = "inset(0 0 0 0)", NONE = "inset(0 0 100% 0)";
+        if (boundary === null) {
+          var uniformDark = darkAtDocY(scrollY + (topV + vh) / 2);
+          lClip = uniformDark ? FULL : NONE;
+          dClip = uniformDark ? NONE : FULL;
+        } else {
+          /* Schnittkante in Element-Koordinaten (vor Transform) */
+          var cut = Math.max(0, Math.min(hEl, (boundary - topV) / scaleNum));
+          var topPart = "inset(0 0 " + (hEl - cut).toFixed(1) + "px 0)";
+          var bottomPart = "inset(" + cut.toFixed(1) + "px 0 0 0)";
+          lClip = upperDark ? topPart : bottomPart;
+          dClip = upperDark ? bottomPart : topPart;
+        }
+        if (lClip !== bergLast.lc) { bergLight.style.clipPath = lClip; bergLast.lc = lClip; }
+        if (dClip !== bergLast.dc) { bergDark.style.clipPath = dClip; bergLast.dc = dClip; }
       }
       bergTicking = false;
     }
@@ -228,6 +233,25 @@
     updateBerg();
     window.addEventListener("scroll", onBergScroll, { passive: true });
     sectionConsumers.push(updateBerg);
+  }
+
+  /* ---------- Navigation: Schriftfarbe je Sektion (statt mix-blend-mode) ---------- */
+  /* Der frühere Blend-Layer der Nav zwang den Browser, die gesamte Seite bei
+     jedem Scroll-Frame mitzukompositieren — die letzte Quelle des
+     Glyphen-Flackerns. Jetzt: dunkle Schrift, sobald unter der Nav-Zone eine
+     helle Sektion liegt (gleiche Sektions-Vermessung wie Berg und Raster). */
+  if (nav) {
+    var navOnSandLast = null;
+    var updateNavTone = function () {
+      var onSand = !darkAtDocY(window.pageYOffset + (nav.offsetHeight || 76) / 2);
+      if (onSand !== navOnSandLast) {
+        nav.classList.toggle("on-sand", onSand);
+        navOnSandLast = onSand;
+      }
+    };
+    updateNavTone();
+    window.addEventListener("scroll", updateNavTone, { passive: true });
+    sectionConsumers.push(updateNavTone);
   }
 
   /* ---------- Punkt-Raster mit Cursor-Gravitation ---------- */
