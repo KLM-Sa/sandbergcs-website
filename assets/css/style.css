@@ -29,6 +29,12 @@
   --maxw: 1480px;
   --gutter: clamp(20px, 5vw, 72px);
 
+  /* Vertikaler Rhythmus — EIN Maß für alle Kapitel-Sektionen:
+     Sektionsrand (Farbkante → Kapitel-Label) und Label → Inhalt.
+     Bewusst überall identisch, damit jeder Sektionswechsel gleich atmet. */
+  --sec-pad: clamp(72px, 12vh, 160px);
+  --kicker-gap: clamp(30px, 5vh, 64px);
+
   --nav-h: 76px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -514,24 +520,17 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   color: var(--black);
   border-top: 1px solid var(--sand-line);
   overflow: hidden;
-  min-height: 100svh;                 /* füllt den Screen wie die anderen Sektionen */
-  display: flex;
-  flex-direction: column;
+  /* einheitlicher Sektionsrand statt Viewport-Zentrierung — alle Kapitel
+     starten mit exakt demselben Abstand Farbkante → Kapitel-Label */
+  padding: var(--sec-pad) 0;
 }
 
-/* Headline + Grid bilden einen vertikal zentrierten Block (justify-content:
-   center) -> Weißraum oben (Start→Headline) und unten (letzte Zeile→Ende)
-   bleibt exakt gleich. Der Abstand Headline→Grid steuert die Headline-Marge
-   und ist bewusst kleiner gehalten, damit die Auflistung näher an der Headline
-   sitzt. */
 .lst__inner {
   position: relative;
   z-index: 41;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: clamp(36px, 5.5vh, 72px);   /* Headline→Grid (fester Gutter, wird nicht umverteilt) */
+  gap: var(--kicker-gap);          /* Label→Grid, einheitliches Maß */
 }
 
 /* Editorial-Headline */
@@ -630,11 +629,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   background: var(--ink);
   color: var(--sand);
   border-top: 1px solid rgba(255, 231, 182, 0.08);
-  /* Rand oben/unten so breit wie bei 01 (Leistungen). JS (main.js) misst den
-     dynamischen Rand von 01 und überträgt ihn exakt als symmetrisches Padding.
-     Dieses calc() ist der Fallback ohne JS: 01 zentriert ~508px Inhalt in 100svh
-     -> Rand ≈ (100svh - 508px)/2 = 50svh - 254px (gegen Mini-/Maxwerte geclamped). */
-  padding: clamp(64px, calc(50svh - 254px), 320px) 0;
+  padding: var(--sec-pad) 0;   /* einheitlicher Sektionsrand */
 }
 .prc__inner { position: relative; z-index: 41; }
 
@@ -645,13 +640,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   font-size: clamp(2.8rem, 9vw, 7rem);
   line-height: 0.94;
   letter-spacing: -0.02em;
-  /* Der visuelle Abstand Headline→erster Punkt soll EXAKT dem von 01
-     (Leistungen→Campaigns) entsprechen. Das misst JS (main.js) live an den
-     Schrift-Grundlinien beider Sektionen und überträgt ihn pixelgenau – nötig,
-     weil die ersten Elemente unterschiedliche line-heights haben (Campaigns 1.5
-     vs. Schritt-Titel 1.05) und „Leistungen" eine g-Unterlänge hat, „Wie ich
-     arbeite" nicht. Dieses calc() ist nur der Fallback ohne JS. */
-  margin-bottom: calc(clamp(36px, 5.5vh, 72px) + 10px);
+  margin-bottom: var(--kicker-gap);   /* Label→Inhalt, einheitliches Maß */
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -758,7 +747,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   color: var(--sand);
   border-top: 1px solid rgba(255, 231, 182, 0.08);
   overflow: hidden;
-  padding: clamp(72px, 12vh, 168px) 0;
+  padding: var(--sec-pad) 0;   /* einheitlicher Sektionsrand */
 }
 .pf__inner { position: relative; z-index: 41; }
 
@@ -773,7 +762,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.25em;
-  margin-bottom: clamp(16px, 2.4vh, 28px);
+  margin-bottom: var(--kicker-gap);   /* Label→Inhalt, einheitliches Maß */
 }
 .pf__title-index { color: var(--accent); }
 
@@ -923,13 +912,14 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   color: var(--black);
   border-top: 1px solid var(--sand-line);
   overflow: hidden;
-  padding: clamp(80px, 14vh, 200px) 0;
+  padding: var(--sec-pad) 0;   /* einheitlicher Sektionsrand */
 }
 .abt__inner { position: relative; z-index: 41; }
 
 /* Kapitel-Mikro-Label */
 .abt__kicker {
-  display: inline-flex;
+  line-height: 1;
+  display: flex;
   align-items: baseline;
   gap: 0.6em;
   font-family: var(--font-body);
@@ -938,7 +928,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   text-transform: uppercase;
   letter-spacing: 0.15em;
   color: rgba(10, 10, 10, 0.55);
-  margin-bottom: clamp(30px, 5.5vh, 72px);
+  margin-bottom: var(--kicker-gap);
 }
 .abt__kicker-num { color: var(--accent); }
 
@@ -1029,13 +1019,14 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   color: var(--sand);
   border-top: 1px solid rgba(255, 231, 182, 0.08);
   overflow: hidden;
-  padding: clamp(80px, 14vh, 200px) 0;
+  padding: var(--sec-pad) 0;   /* einheitlicher Sektionsrand */
 }
 .cnt__inner { position: relative; z-index: 41; }
 
 /* Kapitel-Mikro-Label (hell) */
 .cnt__kicker {
-  display: inline-flex;
+  line-height: 1;
+  display: flex;
   align-items: baseline;
   gap: 0.6em;
   font-family: var(--font-body);
@@ -1044,7 +1035,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   text-transform: uppercase;
   letter-spacing: 0.15em;
   color: rgba(255, 231, 182, 0.55);
-  margin-bottom: clamp(30px, 5.5vh, 72px);
+  margin-bottom: var(--kicker-gap);
 }
 .cnt__kicker-num { color: var(--accent); }
 
@@ -1250,7 +1241,8 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   margin-bottom: clamp(48px, 8vh, 104px);
 }
 .legal__kicker {
-  display: inline-flex;
+  line-height: 1;
+  display: flex;
   align-items: baseline;
   gap: 0.6em;
   font-family: var(--font-body);
@@ -1519,7 +1511,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 .case__section {
   background: var(--sand);
   color: var(--black);
-  padding: clamp(56px, 10vh, 128px) 0;
+  padding: var(--sec-pad) 0;   /* einheitlicher Sektionsrand */
 }
 .case__section--dark { background: var(--ink); color: var(--sand); }
 /* Reines Bild-Intro direkt nach dem Header: kein doppelter Abstand zur Folge-Sektion */
@@ -1534,7 +1526,8 @@ body.no-scroll .nav { mix-blend-mode: normal; }
 .legal__title { text-wrap: balance; }
 
 .case__kicker-line {
-  display: inline-flex;
+  line-height: 1;
+  display: flex;
   align-items: baseline;
   gap: 0.6em;
   font-family: var(--font-body);
@@ -1543,7 +1536,7 @@ body.no-scroll .nav { mix-blend-mode: normal; }
   text-transform: uppercase;
   letter-spacing: 0.15em;
   color: rgba(10, 10, 10, 0.5);
-  margin-bottom: clamp(24px, 4vh, 44px);
+  margin-bottom: var(--kicker-gap);
 }
 .case__section--dark .case__kicker-line { color: rgba(255, 231, 182, 0.5); }
 .case__kicker-line .num { color: var(--accent); }
@@ -2010,30 +2003,47 @@ body.no-scroll .nav { mix-blend-mode: normal; }
    Buttons folgen derselben sanften Anziehungs-Physik. Der Cursor
    ist konzeptionell der orange Signaturpunkt des Claims.
    ============================================================ */
+/* Punkt: sitzt präzise an der Maus */
 .cursor {
   position: fixed;
   top: 0;
   left: 0;
   z-index: 300;
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--accent);
-  border: 1.5px solid transparent;
   pointer-events: none;
   transition: width .25s var(--ease), height .25s var(--ease),
-              background .25s var(--ease), border-color .25s var(--ease),
               opacity .2s ease;
 }
-/* über Interaktivem: blüht zum Ring auf */
-.cursor.is-link {
-  width: 34px;
-  height: 34px;
-  background: rgba(255, 90, 0, 0.12);
+/* Ring: folgt dem Punkt mit spürbarem Nachlauf — die sichtbare „Anziehung" */
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 299;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 90, 0, 0.55);
+  background: transparent;
+  pointer-events: none;
+  transition: width .3s var(--ease), height .3s var(--ease),
+              background .3s var(--ease), border-color .3s var(--ease),
+              opacity .2s ease;
+}
+/* über Interaktivem: Ring blüht auf und füllt sich leicht, Punkt schrumpft */
+.cursor.is-link { width: 5px; height: 5px; }
+.cursor-ring.is-link {
+  width: 52px;
+  height: 52px;
+  background: rgba(255, 90, 0, 0.10);
   border-color: var(--accent);
 }
-.cursor.is-down { width: 22px; height: 22px; }
-.cursor.is-hidden { opacity: 0; }
+/* Klick: Ring zieht sich zusammen */
+.cursor-ring.is-down { width: 26px; height: 26px; }
+.cursor.is-hidden, .cursor-ring.is-hidden { opacity: 0; }
 /* nativer Cursor aus — Formularfelder behalten ihren (Text-Caret!) */
 .has-cursor, .has-cursor a, .has-cursor button { cursor: none; }
 .has-cursor input, .has-cursor textarea,

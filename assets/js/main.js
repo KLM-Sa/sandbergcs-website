@@ -227,12 +227,12 @@
      tatsächlich etwas bewegt; bei reduced-motion bleibt das Raster statisch. */
   (function () {
     var SPACING = 25;        // Rasterweite (px) — fein, nah an der Referenz
-    var DOT_R = 0.9;         // Punktradius (px)
+    var DOT_R = 1;           // Punktradius (px)
     var PULL_RADIUS = 240;   // Wirkradius des Cursors (px)
     var PULL_MAX = 8;        // maximale Verschiebung zum Cursor (px)
     var EASE = 0.14;         // Nachlauf der Punkte (0..1)
-    var A_LIGHT = 0.14;      // Alpha: helle Punkte auf dunklen Sektionen
-    var A_DARK = 0.11;       // Alpha: dunkle Punkte auf Sand
+    var A_LIGHT = 0.18;      // Alpha: helle Punkte auf dunklen Sektionen
+    var A_DARK = 0.14;       // Alpha: dunkle Punkte auf Sand
     var A_BOOST = 0.10;      // leichte Betonung im Cursor-Umfeld
 
     var canvas = document.createElement("canvas");
@@ -403,21 +403,40 @@
   var finePointer = window.matchMedia
     && window.matchMedia("(pointer: fine)").matches;
   if (finePointer && !reduceMotion) {
+    /* Punkt (präzise an der Maus) + Ring (folgt mit spürbarem Nachlauf) —
+       der Nachlauf macht die Bewegung selbst sichtbar und gibt dem Cursor
+       Präsenz, ohne aufdringlich zu sein. */
     var cursorEl = document.createElement("div");
     cursorEl.className = "cursor is-hidden";
     cursorEl.setAttribute("aria-hidden", "true");
+    var ringEl = document.createElement("div");
+    ringEl.className = "cursor-ring is-hidden";
+    ringEl.setAttribute("aria-hidden", "true");
+    document.body.appendChild(ringEl);
     document.body.appendChild(cursorEl);
     document.documentElement.classList.add("has-cursor");
 
-    var curX = -100, curY = -100, tgtX = -100, tgtY = -100;
+    function cursorState(cls, on) {
+      cursorEl.classList.toggle(cls, on);
+      ringEl.classList.toggle(cls, on);
+    }
+
+    var curX = -100, curY = -100;      // Punkt (schnell)
+    var ringX = -100, ringY = -100;    // Ring (träge — der sichtbare Nachlauf)
+    var tgtX = -100, tgtY = -100;
     var curRaf = null;
 
     function cursorFrame() {
-      curX += (tgtX - curX) * 0.22;
-      curY += (tgtY - curY) * 0.22;
+      curX += (tgtX - curX) * 0.35;
+      curY += (tgtY - curY) * 0.35;
+      ringX += (tgtX - ringX) * 0.13;
+      ringY += (tgtY - ringY) * 0.13;
       cursorEl.style.transform =
         "translate3d(" + curX.toFixed(1) + "px," + curY.toFixed(1) + "px,0) translate(-50%,-50%)";
-      curRaf = (Math.abs(tgtX - curX) > 0.15 || Math.abs(tgtY - curY) > 0.15)
+      ringEl.style.transform =
+        "translate3d(" + ringX.toFixed(1) + "px," + ringY.toFixed(1) + "px,0) translate(-50%,-50%)";
+      curRaf = (Math.abs(tgtX - curX) > 0.15 || Math.abs(tgtY - curY) > 0.15
+                || Math.abs(tgtX - ringX) > 0.15 || Math.abs(tgtY - ringY) > 0.15)
         ? window.requestAnimationFrame(cursorFrame)
         : null;
     }
@@ -425,24 +444,24 @@
     window.addEventListener("pointermove", function (e) {
       if (e.pointerType && e.pointerType !== "mouse") return;
       tgtX = e.clientX; tgtY = e.clientY;
-      cursorEl.classList.remove("is-hidden");
+      cursorState("is-hidden", false);
       if (curRaf === null) curRaf = window.requestAnimationFrame(cursorFrame);
     }, { passive: true });
 
-    /* Zustände per Delegation: Ring über Interaktivem, unsichtbar über Feldern */
+    /* Zustände per Delegation: Aufblühen über Interaktivem, unsichtbar über Feldern */
     document.addEventListener("mouseover", function (e) {
       if (e.target.closest("input, textarea, select, label")) {
-        cursorEl.classList.add("is-hidden");
+        cursorState("is-hidden", true);
         return;
       }
-      cursorEl.classList.remove("is-hidden");
-      cursorEl.classList.toggle("is-link", !!e.target.closest("a, button, .pf__item"));
+      cursorState("is-hidden", false);
+      cursorState("is-link", !!e.target.closest("a, button, .pf__item"));
     });
     document.documentElement.addEventListener("mouseleave", function () {
-      cursorEl.classList.add("is-hidden");
+      cursorState("is-hidden", true);
     });
-    window.addEventListener("mousedown", function () { cursorEl.classList.add("is-down"); });
-    window.addEventListener("mouseup", function () { cursorEl.classList.remove("is-down"); });
+    window.addEventListener("mousedown", function () { cursorState("is-down", true); });
+    window.addEventListener("mouseup", function () { cursorState("is-down", false); });
 
     /* Magnetik: Buttons folgen dem Cursor minimal (28 % des Versatzes) */
     document.querySelectorAll(".btn, .burger").forEach(function (el) {
@@ -524,97 +543,6 @@
     revealEls.forEach(function (el) { io.observe(el); });
   } else {
     revealEls.forEach(function (el) { el.classList.add("is-revealed"); });
-  }
-
-  /* ---------- Prozess-Ränder exakt an Leistungen angleichen ---------- */
-  /* Sektion 01 (Leistungen) zentriert ihren Inhalt in 100svh — der Rand oben/unten
-     ist daher dynamisch (abhängig von Viewport-Höhe und vh-basierten Innenabständen).
-     Damit Sektion 03 (Prozess) exakt denselben Rand erhält, messen wir den
-     oberen Rand von 01 und übertragen ihn als symmetrisches Padding auf 03.
-     offsetTop ist layout-basiert und damit unabhängig vom Reveal-Transform.
-     Das CSS-`calc()` auf .prc bleibt als Fallback ohne JS bestehen. */
-  var lstTitleEl = document.querySelector(".lst__title");
-  var prcSection = document.querySelector(".prc");
-  if (lstTitleEl && prcSection) {
-    var syncTicking = false;
-    function syncPrcPadding() {
-      var gap = lstTitleEl.offsetTop; // .lst__inner hat kein padding-top -> = oberer Rand
-      if (gap > 0) {
-        prcSection.style.paddingTop = gap + "px";
-        prcSection.style.paddingBottom = gap + "px";
-      }
-      syncTicking = false;
-    }
-    syncPrcPadding();
-    window.addEventListener("load", syncPrcPadding);
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(syncPrcPadding);
-    }
-    window.addEventListener("resize", function () {
-      if (!syncTicking) { window.requestAnimationFrame(syncPrcPadding); syncTicking = true; }
-    });
-  }
-
-  /* ---------- Prozess: Headline→1. Punkt exakt wie Leistungen→Campaigns ---------- */
-  /* Der wahrgenommene Abstand soll in beiden Sektionen pixelgenau gleich sein.
-     Knifflig, weil die ersten Elemente verschiedene line-heights haben (Campaigns
-     1.5 vs. Schritt-Titel 1.05) und „Leistungen" eine Unterlänge hat. Wir messen
-     daher den Abstand Schrift-Grundlinie(Headline) → Versalhöhe-Oberkante(1. Element)
-     in BEIDEN Sektionen und gleichen Sektion 03 an Sektion 01 an.
-     Transform-immun: Box-Position via offsetTop-Kette (ignoriert Reveal-Transform),
-     Grundlinien-/Versal-Offsets via Canvas-Schriftmetriken. */
-  var prcTitleEl = document.querySelector(".prc__title");
-  var lstTitleHead = document.querySelector(".lst__title");
-  var lstFirstItem = document.querySelector(".lst__cat-title");          // „Campaigns"
-  var prcFirstItem = document.querySelector(".prc__step-title");          // 1. Schritt
-  if (prcTitleEl && lstTitleHead && lstFirstItem && prcFirstItem) {
-    var gapCanvas = document.createElement("canvas").getContext("2d");
-
-    function docTop(el) {                 // Y im Dokument, ohne Transform
-      var y = 0;
-      for (var n = el; n; n = n.offsetParent) { y += n.offsetTop; }
-      return y;
-    }
-    function fontMetrics(el, sampleText) {
-      var cs = getComputedStyle(el);
-      gapCanvas.font = cs.fontWeight + " " + parseFloat(cs.fontSize) + "px " + cs.fontFamily;
-      var m = gapCanvas.measureText(sampleText || el.textContent.trim());
-      var lh = parseFloat(cs.lineHeight);
-      if (isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.2;
-      var fAsc = m.fontBoundingBoxAscent, fDesc = m.fontBoundingBoxDescent;
-      var leadHalf = (lh - (fAsc + fDesc)) / 2;
-      return { leadHalf: leadHalf, fAsc: fAsc, fDesc: fDesc, capAsc: m.actualBoundingBoxAscent };
-    }
-    /* Grundlinie der LETZTEN Zeile der Headline (falls sie umbricht) */
-    function headlineBaseline(el) {
-      var fm = fontMetrics(el);
-      return docTop(el) + el.offsetHeight - (fm.leadHalf + fm.fDesc);
-    }
-    /* Versalhöhe-Oberkante der ERSTEN Zeile eines Folge-Elements */
-    function itemCapTop(el) {
-      var fm = fontMetrics(el);
-      return docTop(el) + fm.leadHalf + (fm.fAsc - fm.capAsc);
-    }
-
-    var gapTicking = false;
-    function syncPrcHeadGap() {
-      var leistGap = itemCapTop(lstFirstItem) - headlineBaseline(lstTitleHead);
-      var prcGap = itemCapTop(prcFirstItem) - headlineBaseline(prcTitleEl);
-      if (leistGap > 0 && prcGap > 0) {
-        var cur = parseFloat(getComputedStyle(prcTitleEl).marginBottom) || 0;
-        var next = cur + (leistGap - prcGap);
-        if (next > 0) prcTitleEl.style.marginBottom = next.toFixed(2) + "px";
-      }
-      gapTicking = false;
-    }
-    syncPrcHeadGap();
-    window.addEventListener("load", syncPrcHeadGap);
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(syncPrcHeadGap);
-    }
-    window.addEventListener("resize", function () {
-      if (!gapTicking) { window.requestAnimationFrame(syncPrcHeadGap); gapTicking = true; }
-    });
   }
 
   /* ---------- Portfolio: schwebende Sphere (04) ---------- */
