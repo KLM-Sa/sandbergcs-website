@@ -65,12 +65,14 @@ body {
 body.no-scroll { overflow: hidden; }
 
 /* ---------- Globales Berg-Leitmotiv ---------- */
-/* Ein Berg, zwei Farbschichten übereinander: weiß für dunkle Sektionen,
-   schwarz für Sand. JS vermisst die Sektions-Hintergründe (Luminanz) und
-   crossfadet beim Scrollen nur die beiden Opacity-Werte.
-   Bewusst KEIN mix-blend-mode mehr: der Blend-Layer zwang den Browser,
-   die Headlines beim Scrollen permanent mitzukompositieren — sichtbares
-   Glyphen-Flackern (v. a. bei fetten Anton-Stämmen). */
+/* Ein Berg, zwei deckungsgleich gestapelte Farbschichten: weiß und schwarz.
+   BEIDE sind permanent sichtbar — es wird NICHT geclippt und NICHT geblendet.
+   Der Trick: jede Schicht ist auf dem „falschen" Hintergrund praktisch
+   unsichtbar (weiß bei 6 % auf Sand ≈ 0, schwarz bei 5 % auf Ink ≈ 0), auf dem
+   „richtigen" liest sie als Berg. So läuft die Bergsilhouette lückenlos über
+   jede Sektionsgrenze — kein Clip-Rennen mit dem nativen Scroll, keine
+   Zwischenlücke, kein mix-blend-mode (der zwang den Browser früher zum
+   Mitkompositieren der Headlines -> Glyphen-Flackern). */
 .berg {
   position: fixed;
   right: clamp(-80px, -4vw, -10px);
@@ -88,12 +90,9 @@ body.no-scroll { overflow: hidden; }
   width: 100%;
   height: auto;
 }
-/* Beide Schichten sind permanent voll deckend — sichtbar ist je Bereich nur
-   die passende: JS clippt sie pixelgenau an der Sektionskante (clip-path).
-   So ist der Berg auch mitten im Übergang auf BEIDEN Hintergründen präsent. */
 .berg__svg--light { opacity: 0.06; }
 .berg__svg--light path { fill: #fff; }
-.berg__svg--dark { opacity: 0.05; clip-path: inset(0 0 100% 0); }
+.berg__svg--dark { opacity: 0.05; }
 .berg__svg--dark path { fill: #000; }
 /* während das Fullscreen-Menü offen ist, tritt der Berg zurück */
 body.no-scroll .berg { opacity: 0; transition: opacity .3s var(--ease); }
@@ -355,18 +354,20 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 }
 .hero__meta {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px 24px;
   color: rgba(255,231,182,0.7);
   width: 100%;
 }
-/* erste Meta-Zeile: Studio-Label links, Verfügbarkeits-Badge rechts */
-.hero__meta-row {
+/* Studio-Labels gestapelt (links); der Badge sitzt rechts oben auf Höhe der
+   ersten Zeile. Auf schmalen Viewports bricht der Badge als Ganzes UNTER
+   beide Labels um (statt zwischen sie zu rutschen). */
+.hero__meta-lines {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px 24px;
+  flex-direction: column;
+  gap: 6px;
 }
 /* Verfügbarkeits-Badge: pulsierender Punkt (Label sitzt bei den Hero-Actions) */
 .avail-dot {
@@ -1969,22 +1970,12 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 /* Reveal-Masken clippen oben — Reserve für Ä/Ö/Ü-Punkte schaffen */
 .hero__title .line > span { padding-top: 0.14em; }
 .case__title-text { padding-top: 0.14em; }
-/* Glyphen-Raster stabilisieren: Die großen Versal-Blöcke bekommen einen
-   dauerhaften eigenen Compositor-Layer (sie animieren ihre transform ohnehin
-   beim Reveal). Ohne den Layer rastert der Browser die Buchstaben beim
-   Scrollen über dem animierten Blend-Berg jeden Frame neu — sichtbares
-   „Wackeln" an fetten Stämmen/Diagonalen (Anton-N). */
-.hero__title .line > span,
-.case__title-text,
-.menu__item a,
-.case__lead,
-.case__split-head,
-.case__next-name,
-.case__cta-title,
-[data-words] .w-in {
-  will-change: transform;
-  backface-visibility: hidden;
-}
+/* BEWUSST KEIN dauerhaftes will-change/backface auf den Headlines:
+   das promoviert die (fetten Anton-)Buchstaben in eigene GPU-Ebenen, die der
+   Browser beim Scrollen resampled -> genau das sichtbare Flimmern an den
+   Stämmen. Ursprünglich gegen den Blend-Berg gedacht (längst entfernt), half
+   es nie. Ohne die Ebenen rendert der Text scharf auf der Hauptebene mit; die
+   einmaligen Reveal-Transitions werden vom Browser ohnehin auto-komponiert. */
 /* Menü: Anton baut höher — Grad etwas zurück, damit alle 6 Punkte in den
    Viewport passen; Nummer wieder oben an die Versalkante gestellt */
 .menu__item a {

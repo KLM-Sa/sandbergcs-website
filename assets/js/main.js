@@ -163,62 +163,18 @@
   var BERG_PARKED = 0.52;    // End-Skalierung (≈ Eckgröße)
 
   if (berg) {
-    var bergLight = berg.querySelector(".berg__svg--light");
-    var bergDark = berg.querySelector(".berg__svg--dark");
-    var bergLast = { s: "", lc: "", dc: "" };
+    /* Nur noch Parallax-Skalierung übers erste Viewport. Die Farbtrennung
+       braucht KEIN JS mehr: beide Schichten sind dauerhaft sichtbar und je
+       Hintergrund liest nur die passende (siehe CSS). Damit entfällt das
+       frühere Clip-Rennen mit dem nativen Scroll (kurze Lücke im Berg beim
+       schnellen Scrollen) vollständig. */
+    var bergLastScale = "";
     var bergTicking = false;
 
     function updateBerg() {
-      var vh = window.innerHeight;
-      var p = Math.min(1, Math.max(0, window.pageYOffset / vh));
-      var scaleNum = reduceMotion ? BERG_PARKED : (1 - p * (1 - BERG_PARKED));
-
-      /* 1) Parallax-Skalierung übers erste Viewport (entfällt bei reduced-motion) */
-      if (!reduceMotion) {
-        var scale = scaleNum.toFixed(3);
-        if (scale !== bergLast.s) { berg.style.setProperty("--berg-scale", scale); bergLast.s = scale; }
-      }
-
-      /* 2) Farbschichten pixelgenau an der Sektionskante clippen.
-         Beide Schichten sind permanent voll deckend; sichtbar ist je Bereich
-         nur die passende (weiß über dunklen, schwarz über hellen Sektionen).
-         Der Berg bleibt so auch mitten im Übergang auf BEIDEN Hintergründen
-         präsent — ohne Blend-Layer, ohne Fade-Loch. */
-      if (bergLight && bergDark && pageSections.length) {
-        var scrollY = window.pageYOffset;
-        var hEl = berg.offsetHeight;                 // untransformierte Höhe
-        var topV = vh - hEl * scaleNum;              // Oberkante im Viewport (origin unten)
-
-        /* Farbwechsel-Grenze im Berg-Bereich suchen (praktisch max. eine) */
-        var boundary = null, upperDark = true;
-        for (var i = 1; i < pageSections.length; i++) {
-          var by = pageSections[i].top - scrollY;
-          if (by <= topV) continue;
-          if (by >= vh) break;
-          if (pageSections[i].dark !== pageSections[i - 1].dark) {
-            boundary = by;
-            upperDark = pageSections[i - 1].dark;
-            break;
-          }
-        }
-
-        var lClip, dClip;
-        var FULL = "inset(0 0 0 0)", NONE = "inset(0 0 100% 0)";
-        if (boundary === null) {
-          var uniformDark = darkAtDocY(scrollY + (topV + vh) / 2);
-          lClip = uniformDark ? FULL : NONE;
-          dClip = uniformDark ? NONE : FULL;
-        } else {
-          /* Schnittkante in Element-Koordinaten (vor Transform) */
-          var cut = Math.max(0, Math.min(hEl, (boundary - topV) / scaleNum));
-          var topPart = "inset(0 0 " + (hEl - cut).toFixed(1) + "px 0)";
-          var bottomPart = "inset(" + cut.toFixed(1) + "px 0 0 0)";
-          lClip = upperDark ? topPart : bottomPart;
-          dClip = upperDark ? bottomPart : topPart;
-        }
-        if (lClip !== bergLast.lc) { bergLight.style.clipPath = lClip; bergLast.lc = lClip; }
-        if (dClip !== bergLast.dc) { bergDark.style.clipPath = dClip; bergLast.dc = dClip; }
-      }
+      var p = Math.min(1, Math.max(0, window.pageYOffset / window.innerHeight));
+      var scale = (1 - p * (1 - BERG_PARKED)).toFixed(3);
+      if (scale !== bergLastScale) { berg.style.setProperty("--berg-scale", scale); bergLastScale = scale; }
       bergTicking = false;
     }
 
@@ -228,11 +184,10 @@
 
     if (reduceMotion) {
       berg.style.setProperty("--berg-scale", String(BERG_PARKED));
+    } else {
+      updateBerg();
+      window.addEventListener("scroll", onBergScroll, { passive: true });
     }
-
-    updateBerg();
-    window.addEventListener("scroll", onBergScroll, { passive: true });
-    sectionConsumers.push(updateBerg);
   }
 
   /* ---------- Navigation: Schriftfarbe je Sektion (statt mix-blend-mode) ---------- */
@@ -356,17 +311,32 @@
         wake();
       });
     }
-    /* beim Scrollen wandern die Sektionsgrenzen — Farben nachziehen.
-       Gedrosselt auf Rasterband-Wechsel (alle SPACING px): das Canvas wird
-       nicht mehr pro Frame neu gezeichnet — weniger Paint-Last, kein
-       Mit-Flackern der Headlines beim Scrollen. */
-    var lastScrollBand = -1;
-    window.addEventListener("scroll", function () {
-      var band = Math.floor(window.pageYOffset / SPACING);
-      if (band !== lastScrollBand) {
-        lastScrollBand = band;
-        wake();
+    /* Die Punktfarben ändern sich beim Scrollen NUR, während eine
+       Sektionsgrenze durchs Bild wandert. Innerhalb einer Sektion bleibt das
+       Feld farbgleich -> dann NICHT neu zeichnen. So repaintet das große fixe
+       Canvas beim normalen Scrollen gar nicht mehr (das war die letzte
+       Restquelle des Headline-Flimmerns); nur während eine Grenze kreuzt, wird
+       pro Rasterband einmal nachgezogen. Nach dem Scroll-Ende zieht ein
+       Sicherheitsnetz einmal die korrekten Farben nach (falls eine Grenze
+       zwischen zwei Scroll-Events komplett übersprungen wurde). */
+    function boundaryInView() {
+      var top = window.pageYOffset, bot = top + window.innerHeight;
+      for (var i = 1; i < pageSections.length; i++) {
+        if (pageSections[i].dark !== pageSections[i - 1].dark) {
+          var b = pageSections[i].top;
+          if (b > top - SPACING && b < bot + SPACING) return true;
+        }
       }
+      return false;
+    }
+    var lastScrollBand = -1, scrollIdle = null;
+    window.addEventListener("scroll", function () {
+      if (boundaryInView()) {
+        var band = Math.floor(window.pageYOffset / SPACING);
+        if (band !== lastScrollBand) { lastScrollBand = band; wake(); }
+      }
+      if (scrollIdle) clearTimeout(scrollIdle);
+      scrollIdle = setTimeout(wake, 120);
     }, { passive: true });
 
     sectionConsumers.push(sizeGrid);
