@@ -211,27 +211,39 @@
 
   /* ---------- Punkt-Raster mit Cursor-Gravitation ---------- */
   /* Feines Punktraster hinter allen Inhalten (z 39: über den Sektionsflächen,
-     unter Berg und Content). Die Punkte werden vom Cursor minimal angezogen —
-     weicher Falloff, geeaster Nachlauf — und nehmen die Farbe der jeweiligen
-     Sektion an (hell auf dunkel, dunkel auf Sand). Das Canvas wird per JS
-     erzeugt, es braucht kein Markup. Die rAF-Schleife läuft nur, solange sich
-     tatsächlich etwas bewegt; bei reduced-motion bleibt das Raster statisch. */
+     unter Berg und Content). ZWEI deckungsgleiche, permanent gezeichnete
+     Ebenen: sand-farbene Punkte + ink-farbene Punkte. Jede Ebene ist auf ihrem
+     EIGENEN Hintergrund praktisch unsichtbar (Sand auf Sand, Ink auf Ink) und
+     liest nur auf dem anderen — dasselbe Prinzip wie der Berg. Dadurch zeigt
+     sich beim Scrollen automatisch die passende Ebene, OHNE dass das Canvas
+     neu gezeichnet werden muss. Es gibt daher KEINEN Scroll-Repaint mehr — das
+     war die letzte Compositor-Last hinter den Headlines (Flimmern). Neu
+     gezeichnet wird nur noch für die Cursor-Gravitation. */
   (function () {
     var SPACING = 25;        // Rasterweite (px) — fein, nah an der Referenz
     var DOT_R = 1;           // Punktradius (px)
     var PULL_RADIUS = 240;   // Wirkradius des Cursors (px)
     var PULL_MAX = 8;        // maximale Verschiebung zum Cursor (px)
     var EASE = 0.14;         // Nachlauf der Punkte (0..1)
-    var A_LIGHT = 0.18;      // Alpha: helle Punkte auf dunklen Sektionen
-    var A_DARK = 0.14;       // Alpha: dunkle Punkte auf Sand
+    var A_LIGHT = 0.18;      // Alpha der sand-farbenen Punkte (lesbar auf Ink)
+    var A_DARK = 0.14;       // Alpha der ink-farbenen Punkte (lesbar auf Sand)
     var A_BOOST = 0.10;      // leichte Betonung im Cursor-Umfeld
 
-    var canvas = document.createElement("canvas");
-    canvas.className = "dotgrid";
-    canvas.setAttribute("aria-hidden", "true");
-    document.body.appendChild(canvas);
-    var ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    function mkCanvas() {
+      var c = document.createElement("canvas");
+      c.className = "dotgrid";
+      c.setAttribute("aria-hidden", "true");
+      document.body.appendChild(c);
+      return c;
+    }
+    /* Reihenfolge: ink-Ebene unten, sand-Ebene oben. So bleiben die dunklen
+       Sektionen (v. a. der Hero) absolut sauber; auf Sand wird der dunkle Punkt
+       durch die obenliegende Sand-Ebene nur minimal aufgehellt (vernachlässigbar). */
+    var canvasDark = mkCanvas();
+    var canvasLight = mkCanvas();
+    var ctxD = canvasDark.getContext("2d");
+    var ctxL = canvasLight.getContext("2d");
+    if (!ctxD || !ctxL) return;
 
     var cols = 0, rows = 0, offX = 0, offY = 0, dpr = 1;
     var disp = null;                 // [dx, dy] je Punkt (aktuelle Verschiebung)
@@ -240,8 +252,10 @@
 
     function sizeGrid() {
       dpr = Math.min(2, window.devicePixelRatio || 1);
-      canvas.width = Math.round(window.innerWidth * dpr);
-      canvas.height = Math.round(window.innerHeight * dpr);
+      [canvasDark, canvasLight].forEach(function (c) {
+        c.width = Math.round(window.innerWidth * dpr);
+        c.height = Math.round(window.innerHeight * dpr);
+      });
       cols = Math.ceil(window.innerWidth / SPACING) + 1;
       rows = Math.ceil(window.innerHeight / SPACING) + 1;
       offX = (window.innerWidth - (cols - 1) * SPACING) / 2;
@@ -250,20 +264,16 @@
       draw();
     }
 
-    /* Zeichnet einen Frame; liefert true, solange Punkte noch unterwegs sind */
+    /* Zeichnet einen Frame in BEIDE Ebenen (unabhängig vom Scroll); liefert
+       true, solange Punkte noch unterwegs sind (Cursor-Nachlauf). */
     function draw() {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-      var scrollY = window.pageYOffset;
+      var W = window.innerWidth, H = window.innerHeight, TAU = Math.PI * 2;
+      ctxL.setTransform(dpr, 0, 0, dpr, 0, 0); ctxL.clearRect(0, 0, W, H);
+      ctxD.setTransform(dpr, 0, 0, dpr, 0, 0); ctxD.clearRect(0, 0, W, H);
       var moving = false;
-      var TAU = Math.PI * 2;
 
       for (var r = 0; r < rows; r++) {
         var by = offY + r * SPACING;
-        var rowDark = darkAtDocY(by + scrollY);
-        var col = rowDark ? "255,231,182" : "10,10,10";
-        var baseA = rowDark ? A_LIGHT : A_DARK;
-
         for (var c = 0; c < cols; c++) {
           var i = (r * cols + c) * 2;
           var bx = offX + c * SPACING;
@@ -284,10 +294,11 @@
           var dy = disp[i + 1] += (ty - disp[i + 1]) * EASE;
           if (!moving && (Math.abs(tx - dx) > 0.05 || Math.abs(ty - dy) > 0.05)) moving = true;
 
-          ctx.fillStyle = "rgba(" + col + "," + (baseA + A_BOOST * inf).toFixed(3) + ")";
-          ctx.beginPath();
-          ctx.arc(bx + dx, by + dy, DOT_R, 0, TAU);
-          ctx.fill();
+          var px = bx + dx, py = by + dy, a = (A_BOOST * inf);
+          ctxL.fillStyle = "rgba(255,231,182," + (A_LIGHT + a).toFixed(3) + ")";
+          ctxL.beginPath(); ctxL.arc(px, py, DOT_R, 0, TAU); ctxL.fill();
+          ctxD.fillStyle = "rgba(10,10,10," + (A_DARK + a).toFixed(3) + ")";
+          ctxD.beginPath(); ctxD.arc(px, py, DOT_R, 0, TAU); ctxD.fill();
         }
       }
       return moving;
@@ -311,33 +322,8 @@
         wake();
       });
     }
-    /* Die Punktfarben ändern sich beim Scrollen NUR, während eine
-       Sektionsgrenze durchs Bild wandert. Innerhalb einer Sektion bleibt das
-       Feld farbgleich -> dann NICHT neu zeichnen. So repaintet das große fixe
-       Canvas beim normalen Scrollen gar nicht mehr (das war die letzte
-       Restquelle des Headline-Flimmerns); nur während eine Grenze kreuzt, wird
-       pro Rasterband einmal nachgezogen. Nach dem Scroll-Ende zieht ein
-       Sicherheitsnetz einmal die korrekten Farben nach (falls eine Grenze
-       zwischen zwei Scroll-Events komplett übersprungen wurde). */
-    function boundaryInView() {
-      var top = window.pageYOffset, bot = top + window.innerHeight;
-      for (var i = 1; i < pageSections.length; i++) {
-        if (pageSections[i].dark !== pageSections[i - 1].dark) {
-          var b = pageSections[i].top;
-          if (b > top - SPACING && b < bot + SPACING) return true;
-        }
-      }
-      return false;
-    }
-    var lastScrollBand = -1, scrollIdle = null;
-    window.addEventListener("scroll", function () {
-      if (boundaryInView()) {
-        var band = Math.floor(window.pageYOffset / SPACING);
-        if (band !== lastScrollBand) { lastScrollBand = band; wake(); }
-      }
-      if (scrollIdle) clearTimeout(scrollIdle);
-      scrollIdle = setTimeout(wake, 120);
-    }, { passive: true });
+    /* BEWUSST KEIN scroll-Listener: die Ebenen sind statisch, die je Hintergrund
+       passende wird automatisch sichtbar. Kein Repaint beim Scrollen. */
 
     sectionConsumers.push(sizeGrid);
     sizeGrid();
