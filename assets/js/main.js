@@ -151,10 +151,9 @@
   }
 
   /* ---------- Globales Berg-Leitmotiv ---------- */
-  /* Ein Berg, zwei Farbschichten: weiß auf dunklen Sektionen, schwarz auf Sand.
-     Beim Scrollen crossfaden nur zwei Opacity-Werte an den Sektionsgrenzen.
-     Ersetzt mix-blend-mode: difference — der Blend-Layer zwang den Browser,
-     die Headlines beim Scrollen permanent mitzukompositieren (Glyphen-Flackern). */
+  /* Beide Farbschichten sind dauerhaft sichtbar (siehe CSS) — JS steuert nur
+     noch die Parallax-Skalierung übers erste Viewport, quantisiert in groben
+     Schritten (Compositor-Ruhe; die CSS-Transition glättet dazwischen). */
   var berg = document.querySelector(".berg");
   var reduceMotion = window.matchMedia
     ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -173,7 +172,11 @@
 
     function updateBerg() {
       var p = Math.min(1, Math.max(0, window.pageYOffset / window.innerHeight));
-      var scale = (1 - p * (1 - BERG_PARKED)).toFixed(3);
+      /* In 0.02er-Schritten quantisiert (≈ alle 35px Scroll EIN Update statt
+         jedes Frame) — die CSS-Transition auf .berg interpoliert dazwischen.
+         So bleibt der Berg-Layer zwischen den Schritten völlig statisch und
+         zwingt den Compositor nicht mehr, die Headlines mitzubehandeln. */
+      var scale = (Math.round((1 - p * (1 - BERG_PARKED)) * 50) / 50).toFixed(2);
       if (scale !== bergLastScale) { berg.style.setProperty("--berg-scale", scale); bergLastScale = scale; }
       bergTicking = false;
     }
@@ -211,39 +214,32 @@
 
   /* ---------- Punkt-Raster mit Cursor-Gravitation ---------- */
   /* Feines Punktraster hinter allen Inhalten (z 39: über den Sektionsflächen,
-     unter Berg und Content). ZWEI deckungsgleiche, permanent gezeichnete
-     Ebenen: sand-farbene Punkte + ink-farbene Punkte. Jede Ebene ist auf ihrem
-     EIGENEN Hintergrund praktisch unsichtbar (Sand auf Sand, Ink auf Ink) und
-     liest nur auf dem anderen — dasselbe Prinzip wie der Berg. Dadurch zeigt
-     sich beim Scrollen automatisch die passende Ebene, OHNE dass das Canvas
-     neu gezeichnet werden muss. Es gibt daher KEINEN Scroll-Repaint mehr — das
-     war die letzte Compositor-Last hinter den Headlines (Flimmern). Neu
-     gezeichnet wird nur noch für die Cursor-Gravitation. */
+     unter Berg und Content). EINE Ebene in einem warmen Mittelton, dessen
+     Luminanz zwischen Ink und Sand liegt (liest hell auf Dunkel, dunkel auf
+     Sand — ohne Umfärben).
+     ENTSCHEIDEND: Das Muster ist ans DOKUMENT gekoppelt (Zeichnung wird um
+     scrollY versetzt) — die Punkte stehen relativ zum Text still. Ein
+     viewport-fixiertes Muster wandert beim Scrollen unter den weichen
+     Glyphenkanten hindurch und liest als Flackern der Headlines; inhalts-
+     verankert gibt es diese Relativbewegung nicht (so machen es auch die
+     Referenzseiten). Der Repaint pro Scroll-Frame bleibt auf der isolierten
+     Canvas-Ebene und berührt das Text-Rendering nicht. */
   (function () {
     var SPACING = 25;        // Rasterweite (px) — fein, nah an der Referenz
     var DOT_R = 1;           // Punktradius (px)
     var PULL_RADIUS = 240;   // Wirkradius des Cursors (px)
     var PULL_MAX = 8;        // maximale Verschiebung zum Cursor (px)
     var EASE = 0.14;         // Nachlauf der Punkte (0..1)
-    var A_LIGHT = 0.18;      // Alpha der sand-farbenen Punkte (lesbar auf Ink)
-    var A_DARK = 0.14;       // Alpha der ink-farbenen Punkte (lesbar auf Sand)
-    var A_BOOST = 0.10;      // leichte Betonung im Cursor-Umfeld
+    var COL = "150,133,108"; // warmer Mittelton (Luminanz ≈ 0.55)
+    var A_BASE = 0.34;       // Grunddeckung -> Hub wie zuvor: ~48/255 auf Ink, ~30/255 auf Sand
+    var A_BOOST = 0.12;      // leichte Betonung im Cursor-Umfeld
 
-    function mkCanvas() {
-      var c = document.createElement("canvas");
-      c.className = "dotgrid";
-      c.setAttribute("aria-hidden", "true");
-      document.body.appendChild(c);
-      return c;
-    }
-    /* Reihenfolge: ink-Ebene unten, sand-Ebene oben. So bleiben die dunklen
-       Sektionen (v. a. der Hero) absolut sauber; auf Sand wird der dunkle Punkt
-       durch die obenliegende Sand-Ebene nur minimal aufgehellt (vernachlässigbar). */
-    var canvasDark = mkCanvas();
-    var canvasLight = mkCanvas();
-    var ctxD = canvasDark.getContext("2d");
-    var ctxL = canvasLight.getContext("2d");
-    if (!ctxD || !ctxL) return;
+    var canvas = document.createElement("canvas");
+    canvas.className = "dotgrid";
+    canvas.setAttribute("aria-hidden", "true");
+    document.body.appendChild(canvas);
+    var ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     var cols = 0, rows = 0, offX = 0, offY = 0, dpr = 1;
     var disp = null;                 // [dx, dy] je Punkt (aktuelle Verschiebung)
@@ -252,28 +248,27 @@
 
     function sizeGrid() {
       dpr = Math.min(2, window.devicePixelRatio || 1);
-      [canvasDark, canvasLight].forEach(function (c) {
-        c.width = Math.round(window.innerWidth * dpr);
-        c.height = Math.round(window.innerHeight * dpr);
-      });
+      canvas.width = Math.round(window.innerWidth * dpr);
+      canvas.height = Math.round(window.innerHeight * dpr);
       cols = Math.ceil(window.innerWidth / SPACING) + 1;
-      rows = Math.ceil(window.innerHeight / SPACING) + 1;
+      rows = Math.ceil(window.innerHeight / SPACING) + 2;  // +1 Reserve fürs Scroll-Wrapping
       offX = (window.innerWidth - (cols - 1) * SPACING) / 2;
-      offY = (window.innerHeight - (rows - 1) * SPACING) / 2;
+      offY = 0;
       disp = new Float32Array(cols * rows * 2);
       draw();
     }
 
-    /* Zeichnet einen Frame in BEIDE Ebenen (unabhängig vom Scroll); liefert
-       true, solange Punkte noch unterwegs sind (Cursor-Nachlauf). */
+    /* Zeichnet einen Frame; liefert true, solange Punkte noch unterwegs sind */
     function draw() {
-      var W = window.innerWidth, H = window.innerHeight, TAU = Math.PI * 2;
-      ctxL.setTransform(dpr, 0, 0, dpr, 0, 0); ctxL.clearRect(0, 0, W, H);
-      ctxD.setTransform(dpr, 0, 0, dpr, 0, 0); ctxD.clearRect(0, 0, W, H);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       var moving = false;
+      var TAU = Math.PI * 2;
+      /* Dokument-Kopplung: Muster um den Scroll-Rest versetzen (wrappt alle 25px) */
+      var shift = window.pageYOffset % SPACING;
 
       for (var r = 0; r < rows; r++) {
-        var by = offY + r * SPACING;
+        var by = offY + r * SPACING - shift;
         for (var c = 0; c < cols; c++) {
           var i = (r * cols + c) * 2;
           var bx = offX + c * SPACING;
@@ -294,11 +289,10 @@
           var dy = disp[i + 1] += (ty - disp[i + 1]) * EASE;
           if (!moving && (Math.abs(tx - dx) > 0.05 || Math.abs(ty - dy) > 0.05)) moving = true;
 
-          var px = bx + dx, py = by + dy, a = (A_BOOST * inf);
-          ctxL.fillStyle = "rgba(255,231,182," + (A_LIGHT + a).toFixed(3) + ")";
-          ctxL.beginPath(); ctxL.arc(px, py, DOT_R, 0, TAU); ctxL.fill();
-          ctxD.fillStyle = "rgba(10,10,10," + (A_DARK + a).toFixed(3) + ")";
-          ctxD.beginPath(); ctxD.arc(px, py, DOT_R, 0, TAU); ctxD.fill();
+          ctx.fillStyle = "rgba(" + COL + "," + (A_BASE + A_BOOST * inf).toFixed(3) + ")";
+          ctx.beginPath();
+          ctx.arc(bx + dx, by + dy, DOT_R, 0, TAU);
+          ctx.fill();
         }
       }
       return moving;
@@ -322,8 +316,11 @@
         wake();
       });
     }
-    /* BEWUSST KEIN scroll-Listener: die Ebenen sind statisch, die je Hintergrund
-       passende wird automatisch sichtbar. Kein Repaint beim Scrollen. */
+    /* Scroll koppelt das Muster ans Dokument: pro Frame ein Redraw mit neuem
+       Versatz. Läuft komplett auf der eigenen Canvas-Ebene. Gilt bewusst auch
+       bei reduced-motion — inhaltsverankert bedeutet WENIGER wahrgenommene
+       Bewegung der Textur, nicht mehr. */
+    window.addEventListener("scroll", wake, { passive: true });
 
     sectionConsumers.push(sizeGrid);
     sizeGrid();
@@ -564,14 +561,17 @@
       ? window.matchMedia("(prefers-reduced-motion: reduce)")
       : { matches: false, addEventListener: null, addListener: null };
 
-    /* Punkte auf der Einheitskugel (goldener Winkel) */
+    /* Gleichmäßiger Ring mit leichter Höhenstaffelung (statt Fibonacci-Kugel):
+       bei nur 5 Karten garantiert der Ring in JEDER Drehlage gleiche
+       Winkelabstände — keine zufälligen Lücken/Klumpen mehr. Die versetzten
+       Höhen erhalten den räumlichen, schwebenden Charakter. */
     var pfPts = [];
-    var GA = Math.PI * (3 - Math.sqrt(5));
+    var PF_Y = [-0.30, 0.26, -0.10, 0.34, -0.24];
     for (var pi = 0; pi < PF_N; pi++) {
-      var py = 1 - (pi + 0.5) / PF_N * 2;
+      var ang = pi * (Math.PI * 2 / PF_N);
+      var py = PF_Y[pi % PF_Y.length];
       var pr = Math.sqrt(Math.max(0, 1 - py * py));
-      var pphi = pi * GA;
-      pfPts.push({ x: Math.cos(pphi) * pr, y: py, z: Math.sin(pphi) * pr });
+      pfPts.push({ x: Math.cos(ang) * pr, y: py, z: Math.sin(ang) * pr });
     }
 
     var pfEnabled = false;
@@ -591,10 +591,14 @@
        seitlich nicht aus der (schmalen) Bühne ragen (wichtig auf dem Phone). */
     function pfRadius() {
       var w = pfStage.clientWidth, h = pfStage.clientHeight;
-      var itemHalf = (pfItems[0] ? pfItems[0].offsetWidth : 140) / 2;
+      var itemW = pfItems[0] ? pfItems[0].offsetWidth : 140;
       var byMin = Math.min(w, h) * 0.42;
-      var byWidth = w / 2 - itemHalf - 8;
-      return Math.max(60, Math.min(byMin, byWidth));
+      var byWidth = w / 2 - itemW / 2 - 8;
+      /* Dichte-Kopplung: Radius nie größer als ~2.1 Kartenbreiten — sonst
+         schwebten auf mittleren Viewports (Tablet) winzige Karten mit riesigen
+         Lücken auf der Kugel. So bleibt das Verhältnis auf allen Größen gleich. */
+      var byItem = itemW * 2.1;
+      return Math.max(60, Math.min(byMin, byWidth, byItem));
     }
 
     function pfRender(t) {
@@ -620,7 +624,7 @@
         var z2 = p.y * sinX + z1 * cosX;
         var x2 = x1;
 
-        var bob = Math.sin(t / 1400 + i * 1.7) * 5;
+        var bob = Math.sin(t / 1400 + i * 1.7) * 3;
         var X = (x2 * R).toFixed(1);
         var Y = (y2 * R + bob).toFixed(1);
         var Z = (z2 * R).toFixed(1);

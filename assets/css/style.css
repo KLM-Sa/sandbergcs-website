@@ -46,6 +46,7 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;  /* kein grauer iOS-Tap-Blitz */
 }
 
 body {
@@ -84,6 +85,10 @@ body.no-scroll { overflow: hidden; }
   will-change: transform;
   transform-origin: 100% 100%;         /* schrumpft in die untere rechte Ecke */
   transform: scale(var(--berg-scale, 1));
+  /* JS setzt die Skalierung in groben Schritten (alle ~35px Scroll), die
+     Transition interpoliert compositor-seitig dazwischen: der Berg-Layer wird
+     nicht mehr pro Scroll-Frame invalidiert (Headline-Ruhe), bleibt aber fluid */
+  transition: transform .35s linear, opacity .3s var(--ease);
 }
 .berg__svg {
   grid-area: 1 / 1;
@@ -95,7 +100,7 @@ body.no-scroll { overflow: hidden; }
 .berg__svg--dark { opacity: 0.05; }
 .berg__svg--dark path { fill: #000; }
 /* während das Fullscreen-Menü offen ist, tritt der Berg zurück */
-body.no-scroll .berg { opacity: 0; transition: opacity .3s var(--ease); }
+body.no-scroll .berg { opacity: 0; }
 
 /* ---------- Punkt-Raster (Canvas, per JS erzeugt) ---------- */
 /* Feines Raster hinter allen Inhalten; Punkte reagieren minimal auf den
@@ -288,7 +293,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   /* eigener Compositor-Layer: hält Einflug flüssig und isoliert den Hover-Repaint */
   backface-visibility: hidden;
 }
-.menu.is-open .menu__item a { transform: translateY(0); }
+.menu.is-open .menu__item a { transform: none; }
 .menu__item a .num {
   font-family: var(--font-body);
   font-weight: 500;
@@ -369,7 +374,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   flex-direction: column;
   gap: 6px;
 }
-/* Verfügbarkeits-Badge: pulsierender Punkt (Label sitzt bei den Hero-Actions) */
+/* Verfügbarkeits-Badge: pulsierender Punkt (sitzt in der ersten Hero-Meta-Zeile) */
 .avail-dot {
   width: 7px;
   height: 7px;
@@ -401,7 +406,9 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   opacity: 0;
 }
 .hero.is-in .hero__title .line > span {
-  transform: translateY(0);
+  transform: none;              /* none statt translateY(0): kein Transform-
+                                   Kontext -> Text bleibt auf der Hauptebene,
+                                   kein GPU-Resampling beim Scrollen */
   opacity: 1;
   transition: transform 1s var(--ease), opacity 1s var(--ease);
 }
@@ -417,7 +424,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   background: none;
   color: var(--accent);
   vertical-align: baseline;
-  transform: translateY(0);
+  transform: none;
   opacity: 0;
 }
 .hero.is-in .hero__title .line .accent-dot {
@@ -447,7 +454,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   transform: translateY(20px);
 }
 .hero.is-in .hero__subline {
-  opacity: 1; transform: translateY(0);
+  opacity: 1; transform: none;
   transition: opacity .9s var(--ease) .5s, transform .9s var(--ease) .5s;
 }
 
@@ -897,7 +904,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   position: absolute;
   top: 50%;
   left: 50%;
-  width: clamp(92px, 12vw, 168px);
+  width: clamp(112px, 15vw, 180px);   /* stärker vw-gekoppelt: füllt auch Tablet-Breiten */
   margin: 0;
   will-change: transform, opacity, filter;
 }
@@ -1481,7 +1488,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 }
 .case__hero.is-in .case__back    { opacity: 1; transform: none; transition: opacity .8s var(--ease) .1s,  transform .8s var(--ease) .1s; }
 .case__hero.is-in .case__kicker  { opacity: 1; transform: none; transition: opacity .8s var(--ease) .2s,  transform .8s var(--ease) .2s; }
-.case__hero.is-in .case__title-text { opacity: 1; transform: translateY(0); transition: transform 1s var(--ease) .3s, opacity 1s var(--ease) .3s; }
+.case__hero.is-in .case__title-text { opacity: 1; transform: none; transition: transform 1s var(--ease) .3s, opacity 1s var(--ease) .3s; }
 .case__hero.is-in .case__subline { opacity: 1; transform: none; transition: opacity .9s var(--ease) .55s, transform .9s var(--ease) .55s; }
 .case__hero.is-in .case__facts   { opacity: 1; transform: none; transition: opacity .9s var(--ease) .7s,  transform .9s var(--ease) .7s; }
 .case__subline {
@@ -1716,10 +1723,10 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   .case__next-item--next { text-align: left; align-items: flex-start; }
 }
 
-/* — CTA-Band (Sand; Akzent nur dosiert über den Button) — */
+/* — CTA-Band (Sand; Akzent nur dosiert über den Button) —
+   KEIN z-index auf der Sektion selbst: sonst läge ihre Fläche über Raster (39)
+   und Berg (40). Der Inhalt liegt über den .wrap (41) ohnehin darüber. */
 .case__cta {
-  position: relative;
-  z-index: 41;
   background: var(--sand);
   color: var(--black);
   text-align: center;
@@ -2077,7 +2084,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   transform: translateY(115%);
   transition: transform .7s var(--ease);
 }
-[data-words].is-revealed .w-in { transform: translateY(0); }
+[data-words].is-revealed .w-in { transform: none; }
 
 /* ============================================================
    RESPONSIVE
