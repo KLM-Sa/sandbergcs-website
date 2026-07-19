@@ -27,6 +27,19 @@
     copyEl.textContent = copyEl.textContent.replace(/\d{4}/, String(new Date().getFullYear()));
   }
 
+  /* ---------- Projektbilder: erst nach erfolgreichem Laden einblenden ---------- */
+  /* Die Bild-Slots der Projektseiten verweisen bereits auf feste Pfade
+     (assets/work/<projekt>/<slot>.jpg). Das <img> startet transparent; erst wenn
+     es wirklich geladen ist (naturalWidth > 0), wird es eingeblendet und deckt
+     den gestalteten Platzhalter. Fehlt die Datei (404) oder ist sie per
+     loading="lazy" noch nicht geladen, bleibt der Platzhalter stehen. Echte
+     Bilder sind damit reines Drop-in, ohne HTML-Änderung. */
+  document.querySelectorAll(".case__media-img").forEach(function (img) {
+    function reveal() { if (img.naturalWidth > 0) img.classList.add("is-loaded"); }
+    if (img.complete) reveal();            // aus Cache bereits fertig
+    img.addEventListener("load", reveal);
+  });
+
   /* ---------- Navigation: bei Scroll ein-/ausblenden ---------- */
   var nav = document.querySelector(".nav");
   var lastY = window.pageYOffset;

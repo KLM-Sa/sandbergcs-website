@@ -1627,6 +1627,25 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 .case__media-ph--dark { background: var(--ink); border-color: rgba(255, 231, 182, 0.14); }
 .case__media-ph--accent { background: var(--accent); border-color: transparent; }
 
+/* Echtes Projektbild: füllt den Slot und deckt den Platzhalter (Berg + Label).
+   Die Slots verweisen schon auf assets/work/<projekt>/<slot>.jpg. Startzustand
+   transparent -> der gestaltete Platzhalter ist sichtbar. main.js blendet das
+   Bild erst nach erfolgreichem Laden ein (.is-loaded); fehlt die Datei oder ist
+   sie noch lazy nicht geladen, bleibt der Platzhalter stehen. Echte Bilder sind
+   damit reines Drop-in — inkl. sanftem Einblenden. */
+.case__media-img {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity .7s var(--ease);
+}
+.case__media-img.is-loaded { opacity: 1; }
+
 .ph__berg { width: clamp(72px, 11vw, 132px); opacity: 0.16; }
 .ph__berg path { fill: var(--ink); }
 .case__media-ph--dark .ph__berg { opacity: 0.3; }
