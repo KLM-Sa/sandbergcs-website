@@ -40,6 +40,90 @@
     img.addEventListener("load", reveal);
   });
 
+  /* ---------- Poster-Galerie (Slider) ---------- */
+  /* [data-slider] trägt den Pfad-Präfix (z. B. assets/work/poster-serie/poster-).
+     Wir suchen poster-01.jpg, poster-02.jpg, ... bis zur ersten Lücke (max 12),
+     bauen daraus die Slides und aktivieren Zähler + Pfeile. Ohne Funde bleibt
+     der gestaltete Platzhalter stehen — gleiche Drop-in-Philosophie wie die
+     übrigen Bild-Slots: Poster hinzufügen = Datei in den Ordner legen. */
+  document.querySelectorAll("[data-slider]").forEach(function (slider) {
+    var prefix = slider.getAttribute("data-slider");
+    var track = slider.querySelector(".case__slider-track");
+    var ui = slider.querySelector(".case__slider-ui");
+    var countEl = slider.querySelector(".case__slider-count");
+    var prevBtn = slider.querySelector(".case__slider-btn--prev");
+    var nextBtn = slider.querySelector(".case__slider-btn--next");
+    if (!track) return;
+
+    var MAX = 12;
+    var found = [];
+
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+    function probe(n) {
+      if (n > MAX) { finish(); return; }
+      var im = new Image();
+      im.onload = function () { found.push(im.src); probe(n + 1); };
+      im.onerror = finish;
+      im.src = prefix + pad(n) + ".jpg";
+    }
+
+    function finish() {
+      if (!found.length) return;           // keine Poster -> Platzhalter bleibt
+      track.innerHTML = "";
+      found.forEach(function (url, i) {
+        var slide = document.createElement("div");
+        slide.className = "case__slide";
+        var img = document.createElement("img");
+        img.src = url;
+        img.alt = "Poster " + pad(i + 1);
+        img.decoding = "async";
+        slide.appendChild(img);
+        track.appendChild(slide);
+      });
+      if (found.length > 1 && ui) {
+        ui.hidden = false;
+        update();
+      }
+    }
+
+    /* Schrittweite = Slide-Breite + Spaltenabstand */
+    function step() {
+      var s = track.querySelector(".case__slide");
+      if (!s) return track.clientWidth;
+      var gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+      return s.offsetWidth + gap;
+    }
+    function index() {
+      var st = step();
+      return st > 0 ? Math.round(track.scrollLeft / st) : 0;
+    }
+    var lastIndex = -1;
+    function update() {
+      var i = index();
+      if (i === lastIndex) return;         // nur bei echtem Slide-Wechsel schreiben
+      lastIndex = i;
+      if (countEl) countEl.textContent = pad(i + 1) + " / " + pad(found.length);
+      if (prevBtn) prevBtn.disabled = i <= 0;
+      if (nextBtn) nextBtn.disabled = i >= found.length - 1;
+    }
+    function go(dir) {
+      track.scrollBy({ left: dir * step(), behavior: reduceMotion ? "auto" : "smooth" });
+    }
+
+    if (prevBtn) prevBtn.addEventListener("click", function () { go(-1); });
+    if (nextBtn) nextBtn.addEventListener("click", function () { go(1); });
+    track.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+      if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+    });
+    /* direkter Aufruf statt rAF-Drosselung: update() macht nur billige Reads
+       und schreibt Zähler/Buttons ausschließlich bei tatsächlicher Änderung */
+    track.addEventListener("scroll", update, { passive: true });
+
+    probe(1);
+  });
+
   /* ---------- Navigation: bei Scroll ein-/ausblenden ---------- */
   var nav = document.querySelector(".nav");
   var lastY = window.pageYOffset;

@@ -1646,6 +1646,63 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 }
 .case__media-img.is-loaded { opacity: 1; }
 
+/* — Poster-Galerie (Slider) — */
+/* Native Scroll-Snap-Spur (Touch/Trackpad) + Pfeile und Zähler im Label-Stil.
+   main.js findet poster-01.jpg … automatisch (data-slider-Präfix) und baut die
+   Slides; ohne Funde bleibt der gestaltete Platzhalter stehen. */
+.case__media--slider { max-width: 820px; margin-inline: auto; }
+.case__slider { position: relative; }
+.case__slider-track {
+  display: flex;
+  gap: clamp(14px, 2vw, 24px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;               /* eigene UI statt Scrollbar */
+}
+.case__slider-track::-webkit-scrollbar { display: none; }
+.case__slider-track:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.case__slide {
+  flex: 0 0 86%;                       /* nächstes Poster lugt an — signalisiert Wischbarkeit */
+  scroll-snap-align: start;
+  aspect-ratio: 707 / 1000;            /* DIN-A-Hochformat */
+  background: var(--sand-soft);
+  border: 1px solid var(--sand-line);
+  overflow: hidden;
+}
+.case__slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.case__slide--ph { flex: 0 0 100%; display: grid; place-items: center; }
+
+.case__slider-ui {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: clamp(14px, 2vh, 20px);
+}
+.case__slider-count {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(10, 10, 10, 0.5);
+  font-variant-numeric: tabular-nums;  /* Zähler springt nicht in der Breite */
+}
+.case__slider-nav { display: flex; gap: 10px; }
+.case__slider-btn {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(10, 10, 10, 0.25);
+  border-radius: 50%;
+  color: var(--black);
+  transition: border-color .3s var(--ease), color .3s var(--ease), opacity .3s var(--ease);
+}
+.case__slider-btn svg { width: 18px; height: 18px; }
+.case__slider-btn:hover { border-color: var(--accent); color: var(--accent); }
+.case__slider-btn[disabled] { opacity: 0.3; pointer-events: none; }
+
 .ph__berg { width: clamp(72px, 11vw, 132px); opacity: 0.16; }
 .ph__berg path { fill: var(--ink); }
 .case__media-ph--dark .ph__berg { opacity: 0.3; }
