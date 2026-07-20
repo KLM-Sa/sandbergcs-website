@@ -84,6 +84,7 @@
       if (found.length > 1 && ui) {
         ui.hidden = false;
         update();
+        evalAuto();                        // Autoplay starten (falls in Sicht & nicht pausiert)
       }
     }
 
@@ -107,19 +108,51 @@
       if (prevBtn) prevBtn.disabled = i <= 0;
       if (nextBtn) nextBtn.disabled = i >= found.length - 1;
     }
+    function goTo(i) {
+      track.scrollTo({ left: i * step(), behavior: reduceMotion ? "auto" : "smooth" });
+    }
     function go(dir) {
-      track.scrollBy({ left: dir * step(), behavior: reduceMotion ? "auto" : "smooth" });
+      goTo(Math.max(0, Math.min(found.length - 1, index() + dir)));
     }
 
-    if (prevBtn) prevBtn.addEventListener("click", function () { go(-1); });
-    if (nextBtn) nextBtn.addEventListener("click", function () { go(1); });
+    /* — Autoplay: wechselt selbsttätig weiter; pausiert bei Hover, Tastatur-Fokus
+       und außerhalb des Sichtfelds; nach der letzten Slide zurück zur ersten.
+       Bei reduced-motion komplett aus. — */
+    var AUTOPLAY_MS = 5000;
+    var autoTimer = null, inView = false, hovered = false, focused = false;
+    function autoNext() {
+      var i = index();
+      goTo(i >= found.length - 1 ? 0 : i + 1);
+    }
+    function evalAuto() {
+      var run = inView && !hovered && !focused && !reduceMotion && found.length > 1;
+      if (run && !autoTimer) autoTimer = window.setInterval(autoNext, AUTOPLAY_MS);
+      else if (!run && autoTimer) { window.clearInterval(autoTimer); autoTimer = null; }
+    }
+    function bumpAuto() {                 // nach manueller Bedienung Countdown neu starten
+      if (autoTimer) { window.clearInterval(autoTimer); autoTimer = null; }
+      evalAuto();
+    }
+
+    if (prevBtn) prevBtn.addEventListener("click", function () { go(-1); bumpAuto(); });
+    if (nextBtn) nextBtn.addEventListener("click", function () { go(1); bumpAuto(); });
     track.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
-      if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); bumpAuto(); }
+      if (e.key === "ArrowRight") { e.preventDefault(); go(1); bumpAuto(); }
     });
     /* direkter Aufruf statt rAF-Drosselung: update() macht nur billige Reads
        und schreibt Zähler/Buttons ausschließlich bei tatsächlicher Änderung */
     track.addEventListener("scroll", update, { passive: true });
+
+    slider.addEventListener("pointerenter", function () { hovered = true; evalAuto(); });
+    slider.addEventListener("pointerleave", function () { hovered = false; evalAuto(); });
+    slider.addEventListener("focusin", function () { focused = true; evalAuto(); });
+    slider.addEventListener("focusout", function () { focused = false; evalAuto(); });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        inView = entries[0].isIntersecting; evalAuto();
+      }, { threshold: 0.35 }).observe(slider);
+    } else { inView = true; }
 
     probe(1);
   });
@@ -560,7 +593,7 @@
     window.addEventListener("mouseup", function () { cursorState("is-down", false); });
 
     /* Magnetik: Buttons folgen dem Cursor minimal (28 % des Versatzes) */
-    document.querySelectorAll(".btn, .burger").forEach(function (el) {
+    document.querySelectorAll(".btn, .burger, .case__slider-btn").forEach(function (el) {
       el.classList.add("magnetic");
       el.addEventListener("mousemove", function (e) {
         var r = el.getBoundingClientRect();

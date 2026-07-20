@@ -1663,15 +1663,15 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 .case__slider-track::-webkit-scrollbar { display: none; }
 .case__slider-track:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .case__slide {
-  flex: 0 0 86%;                       /* nächstes Poster lugt an — signalisiert Wischbarkeit */
+  flex: 0 0 100%;                      /* Slide füllt den Rahmen — gleiche Größe wie die Detail-Slots */
   scroll-snap-align: start;
-  aspect-ratio: 707 / 1000;            /* DIN-A-Hochformat */
+  aspect-ratio: 4 / 5;                 /* identisch zu .case__media--inset der anderen Projektseiten */
   background: var(--sand-soft);
   border: 1px solid var(--sand-line);
   overflow: hidden;
 }
 .case__slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.case__slide--ph { flex: 0 0 100%; display: grid; place-items: center; }
+.case__slide--ph { display: grid; place-items: center; }
 
 .case__slider-ui {
   display: flex;
