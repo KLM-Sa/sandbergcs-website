@@ -105,14 +105,17 @@
       if (i === lastIndex) return;         // nur bei echtem Slide-Wechsel schreiben
       lastIndex = i;
       if (countEl) countEl.textContent = pad(i + 1) + " / " + pad(found.length);
-      if (prevBtn) prevBtn.disabled = i <= 0;
-      if (nextBtn) nextBtn.disabled = i >= found.length - 1;
     }
     function goTo(i) {
       track.scrollTo({ left: i * step(), behavior: reduceMotion ? "auto" : "smooth" });
     }
+    /* Endlos-Umlauf: hinter der letzten Slide wieder zur ersten, vor der ersten
+       zur letzten. Buttons bleiben immer aktiv (kein disabled mehr). */
     function go(dir) {
-      goTo(Math.max(0, Math.min(found.length - 1, index() + dir)));
+      var n = found.length, i = index() + dir;
+      if (i < 0) i = n - 1;
+      else if (i >= n) i = 0;
+      goTo(i);
     }
 
     /* — Autoplay: wechselt selbsttätig weiter; pausiert bei Hover, Tastatur-Fokus
