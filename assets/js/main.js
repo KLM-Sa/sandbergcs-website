@@ -347,13 +347,12 @@
      unter Berg und Content). EINE Ebene in einem warmen Mittelton, dessen
      Luminanz zwischen Ink und Sand liegt (liest hell auf Dunkel, dunkel auf
      Sand — ohne Umfärben).
-     ENTSCHEIDEND: Das Muster ist ans DOKUMENT gekoppelt (Zeichnung wird um
-     scrollY versetzt) — die Punkte stehen relativ zum Text still. Ein
-     viewport-fixiertes Muster wandert beim Scrollen unter den weichen
-     Glyphenkanten hindurch und liest als Flackern der Headlines; inhalts-
-     verankert gibt es diese Relativbewegung nicht (so machen es auch die
-     Referenzseiten). Der Repaint pro Scroll-Frame bleibt auf der isolierten
-     Canvas-Ebene und berührt das Text-Rendering nicht. */
+     Das Raster ist VIEWPORT-STATISCH (Kundenwunsch): die Punkte stehen fest,
+     die Inhalte scrollen darüber — Abstände zwischen Punkten und Elementen
+     variieren beim Scrollen. Dadurch gibt es beim Scrollen KEINE Redraws
+     (auf iOS laufen scroll-Events asynchron zum Rendering — ein dokument-
+     gekoppeltes Muster schwimmt dort sichtbar nach). Neu gezeichnet wird nur
+     für die Cursor-Gravitation. */
   (function () {
     var SPACING = 25;        // Rasterweite (px) — fein, nah an der Referenz
     var DOT_R = 1;           // Punktradius (px)
@@ -376,13 +375,25 @@
     var mx = -1e4, my = -1e4;        // Cursor; weit weg = keine Wirkung
     var raf = null;
 
+    var lastGW = 0, lastGH = 0;
     function sizeGrid() {
+      var w = window.innerWidth, h = window.innerHeight;
+      /* Mobile: Das Ein-/Ausfahren der Browser-Adressleiste feuert resize mit
+         kleinen Höhen-Deltas — ein Neuaufbau leert das Canvas sichtbar
+         (Flackern am unteren Rand). Deshalb: nur bei Breitenänderung oder
+         echtem Höhensprung (Rotation) neu aufbauen; die Zeichenfläche bekommt
+         einen Höhenpuffer und deckt so auch den gewachsenen Viewport. */
+      if (w === lastGW && Math.abs(h - lastGH) < 160) return;
+      lastGW = w; lastGH = h;
+      var H = h + 200;                       // Puffer für einfahrende URL-Leiste
       dpr = Math.min(2, window.devicePixelRatio || 1);
-      canvas.width = Math.round(window.innerWidth * dpr);
-      canvas.height = Math.round(window.innerHeight * dpr);
-      cols = Math.ceil(window.innerWidth / SPACING) + 1;
-      rows = Math.ceil(window.innerHeight / SPACING) + 2;  // +1 Reserve fürs Scroll-Wrapping
-      offX = (window.innerWidth - (cols - 1) * SPACING) / 2;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(H * dpr);
+      canvas.style.width = w + "px";
+      canvas.style.height = H + "px";        // feste Größe statt 100% — kein Mitstretchen
+      cols = Math.ceil(w / SPACING) + 1;
+      rows = Math.ceil(H / SPACING) + 1;
+      offX = (w - (cols - 1) * SPACING) / 2;
       offY = 0;
       disp = new Float32Array(cols * rows * 2);
       draw();
@@ -391,14 +402,12 @@
     /* Zeichnet einen Frame; liefert true, solange Punkte noch unterwegs sind */
     function draw() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
       var moving = false;
       var TAU = Math.PI * 2;
-      /* Dokument-Kopplung: Muster um den Scroll-Rest versetzen (wrappt alle 25px) */
-      var shift = window.pageYOffset % SPACING;
 
       for (var r = 0; r < rows; r++) {
-        var by = offY + r * SPACING - shift;
+        var by = offY + r * SPACING;
         for (var c = 0; c < cols; c++) {
           var i = (r * cols + c) * 2;
           var bx = offX + c * SPACING;
@@ -446,12 +455,6 @@
         wake();
       });
     }
-    /* Scroll koppelt das Muster ans Dokument: pro Frame ein Redraw mit neuem
-       Versatz. Läuft komplett auf der eigenen Canvas-Ebene. Gilt bewusst auch
-       bei reduced-motion — inhaltsverankert bedeutet WENIGER wahrgenommene
-       Bewegung der Textur, nicht mehr. */
-    window.addEventListener("scroll", wake, { passive: true });
-
     sectionConsumers.push(sizeGrid);
     sizeGrid();
   })();

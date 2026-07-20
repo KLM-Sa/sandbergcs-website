@@ -837,6 +837,8 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   transition: transform .4s var(--ease), box-shadow .4s var(--ease);
 }
 .pf__mk { width: 100%; height: 100%; }
+/* echtes Projektbild in der Karte (ersetzt die SVG-Mockups) */
+.pf__img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Hover: nur die Karte skaliert (nicht das JS-transformierte Item) */
 .pf__item:hover .pf__card,
