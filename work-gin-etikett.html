@@ -150,7 +150,7 @@
             <svg class="ph__berg" viewBox="0 0 100 59.63" aria-hidden="true"><path fill-rule="evenodd" d="M49.77 0 L0 59.63 L100 59.63 Z M49.9 0.9 L66.87 59.63 L78.35 59.63 Z"/></svg>
             <span class="ph__tag" data-de="Etikett" data-en="Label">Etikett</span>
           </div>
-          <p class="case__media-cap" data-de="Visual folgt — das Etikett auf der Flasche." data-en="Visual to follow — the label on the bottle.">Visual folgt — das Etikett auf der Flasche.</p>
+          <p class="case__media-cap" data-de="Das Etikett auf der Flasche." data-en="The label on the bottle.">Das Etikett auf der Flasche.</p>
         </div>
       </div>
     </section>
@@ -177,14 +177,30 @@
           </div>
         </div>
 
-        <!-- OPTIONAL: zweites Bild — Modul einfach löschen, wenn kein Material da ist -->
-        <div class="case__media case__media--inset" data-reveal style="transition-delay:.08s">
-          <div class="case__media-ph case__media-ph--dark">
-            <img class="case__media-img" src="assets/work/gin-etikett/detail.jpg" alt="Gin Etikett — Detail" loading="lazy" decoding="async" />
-            <svg class="ph__berg" viewBox="0 0 100 59.63" aria-hidden="true"><path fill-rule="evenodd" d="M49.77 0 L0 59.63 L100 59.63 Z M49.9 0.9 L66.87 59.63 L78.35 59.63 Z"/></svg>
-            <span class="ph__tag" data-de="Detail" data-en="Detail">Detail</span>
+        <!-- BILDERGALERIE (Slider): Bilder als slide-01.jpg, slide-02.jpg, ...
+             in assets/work/gin-etikett/ ablegen — main.js findet sie automatisch
+             und baut die Slides. Ohne Dateien bleibt der gestaltete Platzhalter. -->
+        <div class="case__media case__media--slider" data-reveal style="transition-delay:.08s">
+          <div class="case__slider" data-slider="assets/work/gin-etikett/slide-" role="region" aria-label="Bildergalerie Gin Etikett">
+            <div class="case__slider-track" tabindex="0">
+              <div class="case__media-ph case__media-ph--dark case__slide case__slide--ph">
+                <svg class="ph__berg" viewBox="0 0 100 59.63" aria-hidden="true"><path fill-rule="evenodd" d="M49.77 0 L0 59.63 L100 59.63 Z M49.9 0.9 L66.87 59.63 L78.35 59.63 Z"/></svg>
+                <span class="ph__tag" data-de="Galerie" data-en="Gallery">Galerie</span>
+              </div>
+            </div>
+            <div class="case__slider-ui" hidden>
+              <span class="case__slider-count" aria-live="polite">01 / 01</span>
+              <div class="case__slider-nav">
+                <button class="case__slider-btn case__slider-btn--prev" type="button" aria-label="Vorheriges Bild">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+                </button>
+                <button class="case__slider-btn case__slider-btn--next" type="button" aria-label="Nächstes Bild">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
-          <p class="case__media-cap" data-de="Visual folgt — Detail / Anwendung." data-en="Visual to follow — detail / application.">Visual folgt — Detail / Anwendung.</p>
+          <p class="case__media-cap" data-de="Das Etikett im Detail." data-en="The label in detail.">Das Etikett im Detail.</p>
         </div>
       </div>
     </section>
