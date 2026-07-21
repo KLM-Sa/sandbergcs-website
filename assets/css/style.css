@@ -635,7 +635,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-weight: 500;
   font-size: 0.72rem;
   letter-spacing: 0.12em;
-  color: rgba(10, 10, 10, 0.4);
+  color: rgba(10, 10, 10, 0.6);
   transition: color .35s var(--ease);
 }
 .lst__item-text {
@@ -874,7 +874,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255, 231, 182, 0.45);
+  color: rgba(255, 231, 182, 0.55);
 }
 
 /* ============================================================
@@ -961,7 +961,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(10, 10, 10, 0.55);
+  color: rgba(10, 10, 10, 0.6);
   margin-bottom: var(--kicker-gap);
 }
 .abt__kicker-num { color: var(--accent); }
@@ -1023,7 +1023,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: rgba(10, 10, 10, 0.5);
+  color: rgba(10, 10, 10, 0.6);
 }
 
 @media (max-width: 760px) {
@@ -1102,7 +1102,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: rgba(255, 231, 182, 0.45);
+  color: rgba(255, 231, 182, 0.55);
 }
 .cnt__direct-val {
   font-family: var(--font-display);
@@ -1143,7 +1143,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   padding: 0.5em 0;
   transition: border-color .3s var(--ease);
 }
-.cnt__input::placeholder { color: rgba(255, 231, 182, 0.32); }
+.cnt__input::placeholder { color: rgba(255, 231, 182, 0.55); }
 .cnt__input:focus { outline: none; border-color: var(--accent); }
 .cnt__input:user-invalid { border-color: rgba(255, 90, 0, 0.65); }
 .cnt__textarea { resize: vertical; min-height: 4.5em; line-height: 1.5; }
@@ -1156,7 +1156,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   cursor: pointer;
   padding-right: 1.8em;
 }
-.cnt__select:invalid { color: rgba(255, 231, 182, 0.32); }  /* Platzhalter-Optik */
+.cnt__select:invalid { color: rgba(255, 231, 182, 0.55); }  /* Platzhalter-Optik */
 .cnt__select option { color: #0A0A0A; }                     /* Liste i. d. R. auf hell */
 .cnt__select-arrow {
   position: absolute;
@@ -1243,7 +1243,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   text-transform: uppercase;
   gap: 0.6em;
 }
-.lst__title { color: rgba(10, 10, 10, 0.55); }
+.lst__title { color: rgba(10, 10, 10, 0.6); }
 .prc__title,
 .pf__title { color: rgba(255, 231, 182, 0.55); }
 
@@ -1271,7 +1271,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(10, 10, 10, 0.55);
+  color: rgba(10, 10, 10, 0.6);
   margin-bottom: clamp(22px, 4vh, 44px);
 }
 .legal__kicker-num { color: var(--accent); }
@@ -1460,7 +1460,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   margin-bottom: clamp(18px, 3vh, 30px);
 }
 .case__kicker-num { color: var(--accent); }
-.case__kicker-count { margin-left: auto; color: rgba(255, 231, 182, 0.4); }
+.case__kicker-count { margin-left: auto; color: rgba(255, 231, 182, 0.55); }
 
 .case__title {
   font-family: var(--font-display);
@@ -1517,7 +1517,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255, 231, 182, 0.45);
+  color: rgba(255, 231, 182, 0.55);
 }
 .case__fact-value {
   font-size: clamp(0.95rem, 1.3vw, 1.1rem);
@@ -1556,7 +1556,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(10, 10, 10, 0.5);
+  color: rgba(10, 10, 10, 0.6);
   margin-bottom: var(--kicker-gap);
 }
 .case__section--dark .case__kicker-line { color: rgba(255, 231, 182, 0.5); }
@@ -1694,7 +1694,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(10, 10, 10, 0.5);
+  color: rgba(10, 10, 10, 0.6);
   font-variant-numeric: tabular-nums;  /* Zähler springt nicht in der Breite */
 }
 .case__slider-nav { display: flex; gap: 10px; }
@@ -1728,7 +1728,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: rgba(10, 10, 10, 0.4);
+  color: rgba(10, 10, 10, 0.6);
 }
 .case__media-ph--dark .ph__tag,
 .case__media-ph--accent .ph__tag { color: rgba(255, 255, 255, 0.6); }
@@ -1737,7 +1737,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   margin-top: 0.9em;
   font-size: 0.85rem;
   letter-spacing: 0.01em;
-  color: rgba(10, 10, 10, 0.5);
+  color: rgba(10, 10, 10, 0.6);
 }
 .case__section--dark .case__media-cap { color: rgba(255, 231, 182, 0.5); }
 
@@ -1791,7 +1791,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255, 231, 182, 0.45);
+  color: rgba(255, 231, 182, 0.55);
 }
 .case__next-name {
   font-family: var(--font-display);
@@ -1934,7 +1934,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255, 231, 182, 0.45);
+  color: rgba(255, 231, 182, 0.55);
   margin-bottom: clamp(14px, 2vh, 20px);
 }
 .ft__list {
@@ -1972,13 +1972,13 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 .ft__copy {
   font-size: 0.8rem;
   letter-spacing: 0.02em;
-  color: rgba(255, 231, 182, 0.45);
+  color: rgba(255, 231, 182, 0.55);
 }
 /* Lokalzeit Hamburg (JS tickt sekündlich) */
 .ft__time {
   font-size: 0.8rem;
   letter-spacing: 0.02em;
-  color: rgba(255, 231, 182, 0.45);
+  color: rgba(255, 231, 182, 0.55);
   font-variant-numeric: tabular-nums;   /* Ziffern gleich breit — tickt ohne Zittern */
 }
 .ft__top {
