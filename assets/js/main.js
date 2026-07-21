@@ -71,12 +71,15 @@
     function finish() {
       if (!found.length) return;           // keine Poster -> Platzhalter bleibt
       track.innerHTML = "";
+      /* Alt-Text aus dem Projektnamen (Dokumenttitel vor dem „—") — korrekt auf
+         jeder Projektseite, statt generisch „Poster" (das nur zur Poster-Reihe passt) */
+      var projekt = (document.title.split("—")[0] || "").trim() || "Projekt";
       found.forEach(function (url, i) {
         var slide = document.createElement("div");
         slide.className = "case__slide";
         var img = document.createElement("img");
         img.src = url;
-        img.alt = "Poster " + pad(i + 1);
+        img.alt = projekt + " – Bild " + (i + 1);
         img.decoding = "async";
         slide.appendChild(img);
         track.appendChild(slide);
