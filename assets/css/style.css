@@ -580,6 +580,14 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 }
 .lst__title-index { color: var(--accent); }
 
+/* Positionierungs-Lead (01) — Ink auf Sand, WCAG-AA */
+.lst__lead {
+  max-width: 52ch;
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  line-height: 1.55;
+  color: rgba(10, 10, 10, 0.68);
+}
+
 .lst__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -679,6 +687,22 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   gap: 0.25em;
 }
 .prc__title-index { color: var(--accent); }
+
+/* Paket-Versprechen (Lead) + Verlässlichkeit (Abschluss), 02 — Sand auf Ink */
+.prc__lead {
+  max-width: 54ch;
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  line-height: 1.55;
+  color: rgba(255, 231, 182, 0.72);
+  margin-bottom: clamp(32px, 5vh, 64px);
+}
+.prc__note {
+  max-width: 54ch;
+  margin-top: clamp(36px, 6vh, 72px);
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  line-height: 1.55;
+  color: rgba(255, 231, 182, 0.72);
+}
 
 /* Timeline */
 .prc__steps {
