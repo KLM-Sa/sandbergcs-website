@@ -192,7 +192,9 @@ ul { list-style: none; }
   color: currentColor;
 }
 .nav__logo-mark {
-  height: clamp(26px, 2.6vw, 34px);
+  /* Block-Logo (SAND/BERG/CREATION STUDIO, ~2.28:1) braucht mehr Höhe
+     als die frühere Breit-Lockup (~6.12:1), sonst wird die Unterzeile Matsch */
+  height: clamp(42px, 4.4vw, 56px);
   width: auto;
   color: currentColor;             /* folgt der Nav-Farbe (Sektions-Logik) */
   transition: color .4s ease;
@@ -635,7 +637,10 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   transition: opacity .35s var(--ease);
   z-index: -1;
 }
-.lst__item:hover::before { opacity: 1; }
+/* Hover bewusst AUS: die Leistungen sind (noch) nicht klickbar, jeder
+   Hover-Effekt hat faelschlich Interaktivitaet suggeriert. Wieder aktivieren,
+   sobald es dahinter Detail-Inhalte gibt. */
+/* .lst__item:hover::before { opacity: 1; } */
 
 .lst__item-num {
   flex: 0 0 auto;
@@ -651,8 +656,9 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
   transform-origin: left center;
   transition: transform .35s var(--ease);
 }
-.lst__item:hover .lst__item-text { transform: scale(1.04); }
-.lst__item:hover .lst__item-num { color: var(--accent); }
+/* ebenfalls aus (siehe oben): kein Vergroessern, keine Farbreaktion */
+/* .lst__item:hover .lst__item-text { transform: scale(1.04); } */
+/* .lst__item:hover .lst__item-num { color: var(--accent); } */
 
 @media (max-width: 760px) {
   .lst__grid {
@@ -1920,7 +1926,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 .ft__logo-mark {
   display: block;
   width: 100%;
-  max-width: min(100%, 1040px);
+  max-width: min(100%, 460px);   /* Block-Logo ~2.28:1: 1040px waeren ~456px hoch */
   height: auto;
   margin-inline: auto;
 }
@@ -2075,7 +2081,7 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 .case__title, .case__lead, .case__split-head, .case__quote-text,
 .case__next-name, .case__cta-title, .nf__title, .ft__claim {
   text-transform: uppercase;
-  letter-spacing: 0.008em;
+  letter-spacing: 0.012em;
 }
 /* kleine Display-Grade brauchen in Versalien etwas mehr Tracking */
 .pf__label-name { letter-spacing: 0.035em; }

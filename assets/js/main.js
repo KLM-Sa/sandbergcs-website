@@ -73,7 +73,7 @@
       track.innerHTML = "";
       /* Alt-Text aus dem Projektnamen (Dokumenttitel vor dem „—") — korrekt auf
          jeder Projektseite, statt generisch „Poster" (das nur zur Poster-Reihe passt) */
-      var projekt = (document.title.split("—")[0] || "").trim() || "Projekt";
+      var projekt = (document.title.split(/[—–]/)[0] || "").trim() || "Projekt";
       found.forEach(function (url, i) {
         var slide = document.createElement("div");
         slide.className = "case__slide";
