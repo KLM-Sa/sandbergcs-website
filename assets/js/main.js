@@ -924,6 +924,11 @@
         if (res.ok) {
           cform.reset();
           setStatus("ok");
+          /* Conversion anonym zaehlen (GoatCounter, cookielos) – sonst ist
+             nicht messbar, ob die Seite tatsaechlich Anfragen bringt */
+          if (window.goatcounter && window.goatcounter.count) {
+            window.goatcounter.count({ path: "anfrage-gesendet", title: "Kontaktformular gesendet", event: true });
+          }
         } else {
           setStatus("err");
         }

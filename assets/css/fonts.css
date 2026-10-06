@@ -7,22 +7,6 @@
   font-display: swap;
 }
 
-/* === Clash Display (nicht mehr im Einsatz — nur noch Referenz für font-test.html) === */
-@font-face {
-  font-family: "Clash Display";
-  src: url("../fonts/ClashDisplay-Variable.woff2") format("woff2-variations");
-  font-weight: 200 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Clash Display";
-  src: url("../fonts/ClashDisplay-Semibold.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* === Satoshi (Body) === */
 @font-face {
   font-family: "Satoshi";
