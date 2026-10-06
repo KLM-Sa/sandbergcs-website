@@ -35,7 +35,8 @@
   --sec-pad: clamp(72px, 12vh, 160px);
   --kicker-gap: clamp(30px, 5vh, 64px);
 
-  --nav-h: 76px;
+  --nav-h: 88px;        /* Block-Logo braucht mehr Luft als die alte Breit-Lockup */
+  --anton-ink: 0.0381em;  /* linke Seitenlagerung von Anton, gemessen */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -2089,6 +2090,11 @@ body.no-scroll .nav, body.no-scroll .nav.on-sand { color: var(--sand); }
 
 /* — Zeilenabstände: Umlaut-Luft, Zeile für Zeile austariert — */
 .hero__title { line-height: 1.0; }
+/* Optischer Randausgleich: Anton traegt links 0.0381em Seitenlagerung, das
+   Logo-SVG dagegen 0 (exakt zugeschnittene Bounding-Box). Ohne Ausgleich haengt
+   die Headline sichtbar nach rechts, und der Versatz waechst mit der Schriftgroesse.
+   In em, damit er ueber die ganze clamp()-Skala stimmt. */
+.hero__title { margin-left: calc(-1 * var(--anton-ink)); }
 /* Reveal-Masken clippen oben — Reserve für Ä/Ö/Ü-Punkte schaffen */
 .hero__title .line > span { padding-top: 0.14em; }
 .case__title-text { padding-top: 0.14em; }
