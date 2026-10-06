@@ -888,7 +888,7 @@
     var submitBtn = cform.querySelector(".cnt__submit");
     var STATUS = {
       sending: { de: "Wird gesendet …", en: "Sending …" },
-      ok: { de: "Danke! Deine Anfrage ist angekommen — ich melde mich.", en: "Thanks! Your request came through — I’ll be in touch." },
+      ok: { de: "Danke! Deine Anfrage ist angekommen – ich melde mich.", en: "Thanks! Your request came through – I’ll be in touch." },
       err: { de: "Das hat leider nicht geklappt. Versuch es bitte erneut oder schreib direkt an khian@sandbergcs.de.", en: "That didn’t work, unfortunately. Please try again or email khian@sandbergcs.de directly." }
     };
     function curLang() { return document.documentElement.getAttribute("lang") || "de"; }
